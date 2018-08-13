@@ -6,16 +6,41 @@ to call and forward the data to that. The usage of this script is only from
 the command line.
 """
 
+import sys
+
 import argparse
 
-import sort
+# import sort
+
+# import filter
 
 
-if __name__ == "__main__":
+def parse_cl_arguments():
+    """Parse command line arguments.
+
+    Function to parser command line arguments.
+
+    Parameters
+    ----------
+    args_array : array_like
+        input array with argument tokens.
+
+    Returns
+    -------
+    namespace
+        namespace with parsed arguments key-value pairs.
+
+    Raises
+    ------
+    Error
+        when required arguments are not passed, or there are superfluous args.
+
+    """
     parser = argparse.ArgumentParser(prog="Damian", description="Damian \
                                      metabarcoding preprocessing tool",
-                                     version="0.1")
-    subparser = parser.add_subparsers(help="Damian command to run")
+                                     version="0.1", )
+    subparser = parser.add_subparsers(help="Damian command to run",
+                                      dest="command")
 
     # Add parser for the sorting step
     sortParser = subparser.add_parser("sort")
@@ -47,8 +72,13 @@ if __name__ == "__main__":
                               required=True)
 
     args = parser.parse_args()
+    return args
 
 
 def main():
     """Call main function."""
-    pass
+    args = parse_cl_arguments()
+    print args.command
+
+
+main()
