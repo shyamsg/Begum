@@ -78,7 +78,7 @@ def parse_cl_arguments():
 def main():
     """Call main function."""
     args = parse_cl_arguments()
-    print args.command
+    print args
 
 
 main()
