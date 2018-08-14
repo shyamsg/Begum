@@ -1,8 +1,31 @@
 """The helper module for damian.
 
-The module contaning all the helper function for the damian module. It
+This module contains all the helper function for the damian application. It
 includes, among other things, functions to translate ambiguity bases,
 reverse complement, reverse, check if the dna strings are valid dna strings.
+It also includes a definition of the class dna_pair, which is used to store
+tag pair or primer pair.
+
+Attributes
+----------
+DNA_UNAMBIGUOUS_CHARS : string
+    String of upper and lower case chars when no ambiguity is allowed.
+DNA_UNAMBIGUOUS_REV : string
+    The reverse (dna wise) of the DNA_UNAMBIGUOUS_CHARS string.
+DNA_AMBIGUOUS_CHARS: string
+    String of upper and lower case chars, including ambiguity bases.
+DNA_AMBIGUOUS_REV: string
+    The reverse bases for the DNA_AMBIGUOUS_CHARS string.
+COMPLEMENT_UNAMBIGOUS_DNA :
+    The translation table for complementing dna sequences without ambiuity
+    bases.
+COMPLEMENT_AMBIGOUS_DNA :
+    The translation table for complementing dna sequencing with ambiguity
+    bases.
+AMB_REGEX_DICT : dict
+    The dictionary containing the corresponding regex string for each possible
+    base, including ambiguity bases.
+
 """
 
 from string import maketrans
@@ -124,3 +147,78 @@ def convert_ambiguity_to_regex(dna_string, preserve_case=False):
     for c in dna_string:
         dna_regex += AMB_REGEX_DICT[c]
     return dna_regex
+
+
+class dna_pair():
+    """Class to store pair of dna sequences, either primer pair or tag pair.
+
+    This class is used to represent pairs of dna sequences. It stores a pair of
+    dna sequences. It can return the sequences and their reverse complements on
+    demand. *Remember* that both sequences are stored in 5' - 3' orientation.
+
+    """
+
+    def __init__(self, dna1, dna2):
+        """Initialize object from dna_pair with the given dna sequences.
+
+        Parameters
+        ----------
+        dna1 :  string
+            first dna sequence
+        dna2 : string
+            second dna sequence
+
+        Raises
+        ------
+        ValueError
+            when input dna sequences are not valid.
+
+        """
+        self.dna1 = dna1
+        self.dna2 = dna2
+
+    @property
+    def dna1(self):
+        """DNA 1 sequence.
+
+        The dna1 sequence should be a valid dna sequence. It will be checked at
+        time of setting it. If not a valid sequence, a ValueError will be
+        raised in the setter.
+        """
+        return self._dna1
+
+    @dna1.setter
+    def dna1(self, dna1):
+        if check_dna(dna1):
+            self._dna1 = dna1
+        else:
+            raise ValueError(dna1+" is not a valid dna sequence.")
+
+    @property
+    def dna2(self):
+        """DNA 2 sequence.
+
+        The dna2 sequence should be a valid dna sequence. It will be checked at
+        time of setting it. If not a valid sequence, a ValueError will be
+        raised in the setter.
+        """
+        return self._dna2
+
+    @dna2.setter
+    def dna2(self, dna2):
+        if check_dna(dna2):
+            self._dna2 = dna2
+        else:
+            raise ValueError(dna2+" is not a valid dna sequence.")
+
+    @property
+    def dna1_reverse_complement(self):
+        """Reverse complement of dna1."""
+        return reverse_complement_dna(self.dna1, is_ambiguous=True,
+                                      preserve_case=False)
+
+    @property
+    def dna2_reverse_complement(self):
+        """Reverse complement of dna2."""
+        return reverse_complement_dna(self.dna2, is_ambiguous=True,
+                                      preserve_case=False)
