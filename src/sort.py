@@ -7,9 +7,10 @@ with 2 output (read1 and read 2) for each sample. This is useful for using
 DADA2 downstream.
 """
 
+import logging
+
 import helper
 
-import logging
 
 class sample_sorter():
     """Sample sorter class.
