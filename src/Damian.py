@@ -6,10 +6,21 @@ to call and forward the data to that. The usage of this script is only from
 the command line.
 """
 
+import sys
+
 import argparse
 
-import sort
+# import sort
 
+# import filter
+
+
+def parse_cl_arguments():
+    """Parse command line arguments.
+
+    Function to parser command line arguments.
+
+<<<<<<< HEAD
 import logging
 
 
@@ -23,6 +34,13 @@ def parse_cl_arguments():
     args_array : array_like
         input array with argument tokens.
 
+=======
+    Parameters
+    ----------
+    args_array : array_like
+        input array with argument tokens.
+
+>>>>>>> 1bf353a47d6b9fb346d770b2bf25a8964c09ed88
     Returns
     -------
     namespace
@@ -89,6 +107,7 @@ def parse_cl_arguments():
 
 def main():
     """Call main function."""
+<<<<<<< HEAD
     logger = logging.getLogger("main")
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
@@ -107,6 +126,10 @@ def main():
         sorter.read_primer_file(args.primers)
     elif args.command == "filter":
         logger.info("Running the filter module.")
+=======
+    args = parse_cl_arguments()
+    print args
+>>>>>>> 1bf353a47d6b9fb346d770b2bf25a8964c09ed88
 
 
 main()
