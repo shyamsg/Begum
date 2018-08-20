@@ -7,6 +7,7 @@ with 2 output (read1 and read 2) for each sample. This is useful for using
 DADA2 downstream.
 """
 
+import gzip
 import logging
 
 import helper
@@ -27,6 +28,12 @@ class sample_sorter():
         dictionary with tagname and the corresponding tags.
     _primer_pair : :obj: dna_pair
         forward and reverse primers in a dna_pair object.
+    _merged : bool
+        merge output reads (if paired)
+    _is_paired : bool
+        are input reads paired end?
+    _is_gzipped : bool
+        input reads are zipped?
     fastq1 : string
         filename of read 1 (or only file in single end reads).
     fastq2 : string
@@ -52,6 +59,7 @@ class sample_sorter():
     _primer_pair = None
     _merge = False
     _is_paired = False
+    _is_gzipped = False
     fastq1 = ""
     fastq2 = ""
     merge = False
@@ -84,8 +92,6 @@ class sample_sorter():
         self.complexity_bases = sorter_args.complexity_bases
         self.tag_errors = sorter_args.tag_errors
         self.primer_errors = sorter_args.primer_errors
-        self.output_directory = sorter_args.output_directory
-        self.output_prefix = sorter_args.output_prefix
         self.input_values_check()
 
     def input_values_check(self):
@@ -117,6 +123,21 @@ class sample_sorter():
             self._merge = False
             self.merge_overlap = 0
             self.merge_errors = 0
+        if self.fastq1[-3:] == ".gz":
+            self._is_gzipped = True
+            if self.fastq2[-3:] != ".gz":
+                self.logger.info("Read 2 file is not zipped while read 1 file \
+                                 is (according to extension). Please double \
+                                 check and change extensions before \
+                                 continuing.")
+                raise ValueError("Read file extensions do not match (for \
+                                 gzipness)")
+        if self.fastq1[-3:] != ".gz" and self.fastq2[-3:] == ".gz":
+            self.logger.info("Read 1 file is not zipped while read 2 file is \
+                             (according to extension). Please double check \
+                             and change extensions before continuing.")
+            raise ValueError("Read file extensions do not match (for \
+                                 gzipness)")
 
     def read_primer_file(self, primer_filename):
         """Process the primer file.
@@ -182,10 +203,61 @@ class sample_sorter():
             self._tag_dict[tokens[0]] = helper.dna_pair(tokens[1], tokens[2])
         tag_file.close()
 
-    def process_read_file(self, fastq1, fastq2, tagErrors):
+    def process_read_file(self, output_directory, output_prefix):
         """Process the read file to create per sample read files.
 
         Read the paired-end or single end fastq (possible gzipped) file and
-        process it to separate it into the different components of the
+        process it to separate it into the different samples, as defined in the
+        tag dictionary.
+
+        Parameters
+        ----------
+        output_directory : string
+            output directory path
+        output_prefix : string
+            output prefix for sample files
+
         """
-        pass
+        if self._is_paired:
+            self._process_paired_end(output_directory, output_prefix)
+        else:
+            self._process_single_end(output_directory, output_prefix)
+
+    def _process_single_end(self, output_directory, output_prefix):
+        """Process single end read files.
+
+        Read and separate single end read file into sample read files.
+
+        Parameters
+        ----------
+        output_directory : string
+            output directory path
+        output_prefix : string
+            output prefix for sample files
+
+        """
+        if self._is_gzipped:
+            infile = gzip.open(self.fastq1)
+        else:
+            infile = open(self.fastq1)
+        for line in infile:
+            toks = line.strip().split()
+
+        def _find_best_tag_match(self, sequence):
+            """Find the best tag for the given sequence.
+
+            Function to find the best tag match given, the sequence.
+
+            Parameters
+            ----------
+            seqeuence : :obj: dna_string
+                dna sequence of a read
+
+            Returns
+            -------
+            best_tag_name : string
+                name of the best string match, under the constraints
+            best_tag_mismatch : int
+                mismatch with the best tag sequence
+
+            """
