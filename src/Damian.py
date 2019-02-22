@@ -42,7 +42,7 @@ def parse_cl_arguments():
                             metavar="PrimerFile")
     sortParser.add_argument("-t", "--tags", help="File with forward and \
                             reverse tags for each sample\n(Format: TagName \
-                            ForwardTag ReverseTag)", required=True,
+                            ForwardTag ReverseTag PoolName)", required=True,
                             metavar="TagFile")
     sortParser.add_argument("-pm", "--primerMismatches", help="Rate of \
                             mismatches in primer: range [0,0.5]", type=float,
@@ -56,11 +56,12 @@ def parse_cl_arguments():
                             bases present in tags", action="store_true")
     sortParser.add_argument("-mo", "--merge_overlap", help="Merge read1 and \
                             read2 if overlapping by given number of bases or \
-                            more (>=5)", type=int, default=0,
-                            metavar="MinOverlap")
+                            more (>=5) __NOT IMPLEMENTED YET__", type=int,
+                            default=0, metavar="MinOverlap")
     sortParser.add_argument("-mm", "--merge_errors", help="Rate of mismatches \
-                            allowed in overlap between reads: range [0,0.2]",
-                            type=float, default=0.0, metavar="OverlapErrRate")
+                            allowed in overlap between reads: range [0,0.2]\
+                            __NOT IMPLEMENTED YET__", type=float, default=0.0,
+                            metavar="OverlapErrRate")
     sortParser.add_argument("-d", "--output_directory", help="Output \
                             directory", default=".", metavar="OutDirectory")
     sortParser.add_argument("-o", "--output_prefix", help="Prefix for output \
@@ -69,8 +70,34 @@ def parse_cl_arguments():
 
     # Add parser for the filter step
     filterParser = subparser.add_parser("filter")
-    filterParser.add_argument("-i", "--infile", help="Input file fastqs",
-                              required=True)
+    filterParser.add_argument("-i", "--infofile", help="Information file with\
+                              fastq information for each sample.",
+                              metavar="Infofile", required=True)
+    filterParser.add_argument("-n", "--minNumPCRs", help="Minimum number of \
+                              PCR replicates a sequence should be present in.",
+                              metavar="minPCRNums", type=int, default=1,
+                              required=False)
+    filterParser.add_argument("-p", "--propPCRs", help="Minimum proportion of \
+                              PCR replicates a sequence should be present in.",
+                              metavar="propPCRs", type=float, default=1.0,
+                              required=False)
+    filterParser.add_argument("-m", "--minOccurence", help="Minimum number \
+                              of times a sequence should be present, in a PCR \
+                              replicate to be consider a true sequence.",
+                              metavar="minTimes", type=int, default=1,
+                              required=False)
+    filterParser.add_argument("-l", "--minLength", help="Minimum length of \
+                              the amplicon sequence - in case of single end \
+                              or merged sequences, it is the length of the \
+                              sequence, and in case of paired end reads, it \
+                              is the sum of the length of the 2 reads.",
+                              metavar="minLength", type=int, default=0,
+                              required=False)
+    filterParser.add_argument("-d", "--output_directory", help="Output \
+                              directory", default=".", metavar="OutDirectory")
+    filterParser.add_argument("-o", "--output_prefix", help="Prefix for \
+                              output files", default="", metavar="OutPrefix",
+                              dest="output_prefix")
 
     args = parser.parse_args()
     return args

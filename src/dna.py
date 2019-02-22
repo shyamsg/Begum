@@ -49,7 +49,7 @@ AMB_REGEX_DICT = {"A": "A", "a": "a", "C": "C", "c": "c", "G": "G",
 
 
 class dna_sequence():
-    """Class to store dna sequnceself.
+    """Class to store dna sequnce.
 
     This class represents one dna sequence. Sequence stored in 5'-3'
     orientation.
@@ -187,6 +187,32 @@ class dna_sequence():
         for c in dna_string:
             dna_regex += AMB_REGEX_DICT[c]
         return dna_regex
+
+        def dist(self, other_string, is_ambiguous=False):
+            """Get hamming distance to other string.
+
+            Compute the hamming distance to given string, from oneself's
+            sequence.
+
+            Parameters
+            ----------
+            other_string : string
+                given dna sequence
+            is_ambiguous : bool
+                is the given dna sequence ambiguous?
+
+            Returns
+            -------
+            int
+                hamming distance from self.dna to other_string
+
+            Raises
+            ------
+            ValueError
+                when other dna is not a valid dna string
+
+            """
+            pass
 
 
 class dna_pair():
