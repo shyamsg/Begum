@@ -37,23 +37,33 @@ def parse_cl_arguments():
     sortParser.add_argument("-2", "--fq2", help="Read 2 of paired end",
                             metavar="Fastq2", dest="fastq2", default="")
     sortParser.add_argument("-p", "--primers", help="File with forward and \
-                            reverse primer information\n(Format: PrimerName \
-                            ForwardPrimer ReversePrimer)", required=True,
+                            reverse primer sequence\n(Format: ForwardPrimer \
+                            ReversePrimer)", required=False, default="",
                             metavar="PrimerFile")
+    sortParser.add_argument("-p1", "--fwdPrimer", help="Sequence of forward \
+                            primer", required=False, metavar="FwdPrimer")
+    sortParser.add_argument("-p2", "--revPrimer", help="Sequence of reverse \
+                            primer", required=False, metavar="RevPrimer")
     sortParser.add_argument("-t", "--tags", help="File with forward and \
-                            reverse tags for each sample\n(Format: TagName \
-                            ForwardTag ReverseTag PoolName)", required=True,
-                            metavar="TagFile")
-    sortParser.add_argument("-pm", "--primerMismatches", help="Rate of \
-                            mismatches in primer: range [0,0.5]", type=float,
-                            default=0.0, metavar="PrimerErrorRate",
-                            dest="primer_errors")
-    sortParser.add_argument("-tm", "--tagMismatches", help="Rate of \
-                            mismatches in tags: range [0,0.2]", type=float,
-                            default=0.0, metavar="TagErrorRate",
-                            dest="tag_errors")
-    sortParser.add_argument("-c", "--complexity_bases", help="Complexity \
-                            bases present in tags", action="store_true")
+                            reverse tags \n(Format: TagName FwdTagSequence \
+                            RevTagSequence)", required=True, metavar="TagFile")
+    sortParser.add_argument("-s", "--sampleInfo", help="File with tag combo \
+                            and pool for each sample\n(Format: Sample \
+                            FwdTagName RevTagName PoolName)", required=True,
+                            metavar="SampleInformationFile")
+    sortParser.add_argument("-l", "--pool", help="File with pool information \
+                            \n(Format: Poolname Read1Fastq [Read2Fastq])",
+                            required=True, metavar="PoolInformationFile")
+    sortParser.add_argument("-pm", "--primerMismatches", help="Number of \
+                            mismatches in primer. (Default 0)", type=int,
+                            default=0, metavar="PrimerMismatches",
+                            dest="primer_mismatches")
+    sortParser.add_argument("-tm", "--tagMismatches", help="Number of \
+                            mismatches in tags. (Default 0)", type=int,
+                            default=0.0, metavar="TagMismatches",
+                            dest="tag_mismatches")
+#    sortParser.add_argument("-c", "--complexity_bases", help="Complexity \
+#                            bases present in tags", action="store_true")
     sortParser.add_argument("-mo", "--merge_overlap", help="Merge read1 and \
                             read2 if overlapping by given number of bases or \
                             more (>=5) __NOT IMPLEMENTED YET__", type=int,
@@ -63,10 +73,11 @@ def parse_cl_arguments():
                             __NOT IMPLEMENTED YET__", type=float, default=0.0,
                             metavar="OverlapErrRate")
     sortParser.add_argument("-d", "--output_directory", help="Output \
-                            directory", default=".", metavar="OutDirectory")
+                            directory. (Default: .)", default=".",
+                            metavar="OutDirectory")
     sortParser.add_argument("-o", "--output_prefix", help="Prefix for output \
-                            files", default="", metavar="OutPrefix",
-                            dest="output_prefix")
+                            files. (Default : '')", default="",
+                            metavar="OutPrefix", dest="output_prefix")
 
     # Add parser for the filter step
     filterParser = subparser.add_parser("filter")
@@ -100,7 +111,7 @@ def parse_cl_arguments():
                               dest="output_prefix")
 
     args = parser.parse_args()
-    return args
+    return(args)
 
 
 def main():
@@ -121,6 +132,8 @@ def main():
         sorter = sort.sample_sorter(args)
         sorter.read_tag_file(args.tags)
         sorter.read_primer_file(args.primers)
+        sorter.read_sample_information_file(args.sampleInfo)
+        sorter.process_read_file()
     elif args.command == "filter":
         logger.info("Running the filter module.")
 
