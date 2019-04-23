@@ -30,7 +30,7 @@ AMB_REGEX_DICT : dict
 
 import regex
 
-from textdistance.hamming import distance
+from textdistance import hamming
 
 DNA_UNAMBIGUOUS_CHARS = "ACGTUNacgtun"
 DNA_UNAMBIGUOUS_REV = "TGCAANtgcaan"
@@ -147,4 +147,4 @@ class dna_utility(object):
             sseq = source_seq[(slen-tlen):]
         else:
             sseq = source_seq[0:tlen]
-        return(distance(target_seq, sseq))
+        return(hamming.distance(target_seq, sseq))

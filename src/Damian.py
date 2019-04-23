@@ -44,9 +44,9 @@ def parse_cl_arguments():
                             primer", required=False, metavar="FwdPrimer")
     sortParser.add_argument("-p2", "--revPrimer", help="Sequence of reverse \
                             primer", required=False, metavar="RevPrimer")
-    sortParser.add_argument("-t", "--tags", help="File with forward and \
-                            reverse tags \n(Format: TagName FwdTagSequence \
-                            RevTagSequence)", required=True, metavar="TagFile")
+    sortParser.add_argument("-t", "--tags", help="File with tag name and \
+                            sequence \n(Format: TagName FwdTagSequence)",
+                            required=True, metavar="TagFile")
     sortParser.add_argument("-s", "--sampleInfo", help="File with tag combo \
                             and pool for each sample\n(Format: Sample \
                             FwdTagName RevTagName PoolName)", required=True,
@@ -58,11 +58,10 @@ def parse_cl_arguments():
                             mismatches in primer. (Default 0)", type=int,
                             default=0, metavar="PrimerMismatches",
                             dest="primer_mismatches")
-    sortParser.add_argument("-tm", "--tagMismatches", help="Rate of mismatches \
-                            in tags. (Default 0)", type=float, default=0.0,
-                            metavar="TagMismatches", dest="tag_mismatches")
-#    sortParser.add_argument("-c", "--complexity_bases", help="Complexity \
-#                            bases present in tags", action="store_true")
+    sortParser.add_argument("-tm", "--tagMismatches", help="Number of allowed\
+                            mismatches in tags. (Default 0)", type=int,
+                            default=0, metavar="TagMismatches",
+                            dest="tag_mismatches")
     sortParser.add_argument("-mo", "--merge_overlap", help="Merge read1 and \
                             read2 if overlapping by given number of bases or \
                             more (>=5) __NOT IMPLEMENTED YET__", type=int,
