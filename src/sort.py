@@ -14,6 +14,8 @@ from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from Bio.Seq import Seq
 
+from dna_helper import dna_utility as DU
+
 
 class sample_sorter():
     """Sample sorter class.
@@ -26,12 +28,6 @@ class sample_sorter():
 
     Attributes
     ----------
-    _tag_dict : dict
-        dictionary with tagname and the corresponding tags.
-    _primer_pair : list
-        forward and reverse primers in a list.
-    _merged : bool
-        merge output reads (if paired)
     merge_overlap : int
         minimum overlap in 3' end of read1 and 5' end of read2 for merging.
     merge_errors : float
@@ -52,14 +48,18 @@ class sample_sorter():
     _tag_dict = {}
     _primer_pair = None
     _primer_pair_rc = None
+    _frprims_rgx = None
+    _rfprims_rgx = None
     _samp_info = {}
     _pool_info = {}
     _merge = False
+    _primer_type_counts = [0, 0, 0, 0, 0, 0, 0, 0]
+    _tag_type_counts = [0, 0, 0, 0, 0, 0, 0]
     merge = False
     merge_overlap = 10
     tag_errors = 0.0
     complexity_bases = False
-    primer_errors = 0.0
+    primer_errors = 0
     output_directory = ""
     output_prefix = ""
     logger = None
@@ -134,6 +134,21 @@ class sample_sorter():
         self._primer_pair_rc = (fwd_primer.reverse_complement(),
                                 rev_primer.reverse_complement())
 
+    def _conv_primers_regex(self):
+        """Convert primer seqs to regexes."""
+        self._frprims_rgx = (DU.conv_ambig_regex(str(self._primer_pair[0]),
+                                                 mismatches=self.primer_errors,
+                                                 preserve_case=False),
+                             DU.conv_ambig_regex(str(self._primer_pair_rc[1]),
+                                                 mismatches=self.primer_errors,
+                                                 preserve_case=False))
+        self._rfprims_rgx = (DU.conv_ambig_regex(str(self._primer_pair[1]),
+                                                 mismatches=self.primer_errors,
+                                                 preserve_case=False),
+                             DU.conv_ambig_regex(str(self._primer_pair_rc[0]),
+                                                 mismatches=self.primer_errors,
+                                                 preserve_case=False))
+
     def read_primer_file(self, primer_filename):
         """Process the primer file.
 
@@ -163,6 +178,7 @@ class sample_sorter():
                 raise IOError(line+" does not have 2 tokens.")
             if self._primer_pair is None:
                 self.set_primer_seqs(tokens[0], tokens[1])
+                self._conv_primers_regex()
             else:
                 self.logger.error("More than one primer pair found in file.")
                 raise IOError("Multiple primer pairs found in primer file.")
@@ -171,16 +187,15 @@ class sample_sorter():
     def read_tag_file(self, tag_file_name):
         """Process the tags file.
 
-        Process the tag file, which has the format: TagName ForwardTag
-        ReverseTag. Read the tag file, and store a dictionary that contains
-        the tagname and a pair containing the forward and reverse tag, for
-        all samples.
+        Process the tag file, which has the format: TagName ForwardTag. Read
+        the tag file, and store a dictionary that contains the tagname and a
+        pair containing the forward and reverse tag, for all samples.
 
         Parameters
         ----------
         tag_file_name : string
-            input tag file name, with format:
-            TagName ForwardTag ReverseTag, one sample per line.
+            input tag file name - one sample per line, with format:
+            TagName ForwardTag
 
         Raises
         ------
@@ -194,14 +209,15 @@ class sample_sorter():
             if len(line) == 0:
                 continue
             tokens = line.split()
-            if len(tokens) != 3:
+            if len(tokens) != 2:
+                self.logger.error("Line does not have the correct format.")
                 raise IOError("Line:" + line +
                               "\ndoes not have the correct format.")
             if tokens[0] in self._tag_dict:
                 self.logger.error("Repeat tag name: " + tokens[0])
                 raise IOError(tokens[0] + " already present in file.")
             forwardTag = Seq(tokens[1], IUPAC.IUPACUnambiguousDNA())
-            reverseTag = Seq(tokens[2], IUPAC.IUPACUnambiguousDNA())
+            reverseTag = forwardTag.reverse_complement()
             self._tag_dict[tokens[0]] = (forwardTag, reverseTag)
         self.logger.info("Read " + len(self._tag_dict) + " valid tag \
                          combinations.")
@@ -232,6 +248,7 @@ class sample_sorter():
         for line in samp_file:
             toks = line.strip().split()
             if len(toks) != 4:
+                self.logger.error("Incorrect file format in sample file.")
                 raise IOError("Incorrect number of tokens in sample file:" +
                               line)
             (sample, fwd_tagname, rev_tagname, pool_name) = toks
@@ -256,7 +273,7 @@ class sample_sorter():
                                "tag file.")
             # check if this tag combo already used in this pool
             tag_pair = (fwd_tagname, rev_tagname)
-            if tag_pair in self._pool_info[pool_name]:
+            if tag_pair in self._samp_info[pool_name]:
                 self.logger.error("Tag combination " + tag_pair + " already " +
                                   "used in pool " + pool_name)
                 raise ValueError("Tag combination " + tag_pair + " already " +
@@ -268,7 +285,10 @@ class sample_sorter():
                 sample_count[sample] += 1
             replicate_num = sample_count[sample]
             # update pool info
-            self._pool_info[pool_name][tag_pair] = [sample, replicate_num]
+            self._samp_info[pool_name][tag_pair] = [sample, replicate_num]
+        self.logger.info("Information present for " + len(self._pool_info) +
+                         " pools.")
+        self.logger.info("Read details for " + len(sample_count) + "samples.")
         samp_file.close()
 
     def read_pool_file(self, pool_info_filename):
@@ -331,6 +351,8 @@ class sample_sorter():
             raise ValueError("A combination of paired end and single end reads \
                               are give in the pool information file. We only \
                               allow one type of read across all pools.")
+        self.logger.info("Read pool information for " + len(self._pool_info) +
+                         " pools.")
         pool_file.close()
 
     def process_read_file(self, output_directory, output_prefix):
@@ -354,16 +376,75 @@ class sample_sorter():
             read1_filename = self._pool_info[pool_name]["read1"]
             read2_filename = self._pool_info[pool_name]["read2"]
             is_gzipped = self._pool_info[pool_name]["zipped"]
+            outname = output_directory + "/" + output_prefix
+            outname += + "_" + pool_name
             if read2_filename == "":
-                self.__process_single_end(read1_filename, is_gzipped,
-                                          output_directory, output_prefix)
+                haps = self.__process_single_end(read1_filename, is_gzipped)
+                self.__write_out_files(haps, outname, single_end=True)
             else:
-                self.__process_paired_end(read1_filename, read2_filename,
-                                          is_gzipped, output_directory,
-                                          output_prefix)
+                haps = self.__process_paired_end(read1_filename,
+                                                 read2_filename, is_gzipped)
+                self.__write_out_files(haps, outname, single_end=False)
 
-    def __process_single_end(self, read_filename, is_gzipped, output_directory,
-                             output_prefix):
+    def __write_out_files(self, haps, outprefix, pool_name, single_end):
+        """Write the amplicons to the output file.
+
+        Write the amplicon information  to the output file.
+
+        Parameters
+        ----------
+        haps : dict
+            Dictionary with amplicon data
+        outprefix : string
+            Output file prefix
+        pool_name : string
+            Pool name
+        single_end : bool
+            Is this single end?
+
+        """
+        # Make a set of tags used in this pool.
+        pool_tags = set()
+        for tag_pair in self._samp_info[pool_name]:
+            pool_tags.update(tag_pair)
+
+        tag_out = open(outprefix + ".tagInfo", "w")
+        tag_summary = open(outprefix + ".summaryCounts", "w")
+        if single_end:
+            tag_out.write("Tag1\tTag2\tSeq\tCount\tType\n")
+        else:
+            tag_out.write("Tag1\tTag2\tFSeq\tRSeq\tCount\tType\n")
+        tag_summary.write("Tag1\tTag2\tUniqSeqs\tTotalSeqs\tType\n")
+        for tag_pair, current_haps in haps.items():
+            (ftag, rtag) = tag_pair
+            ftag_in_pool = (ftag in pool_tags)
+            rtag_in_pool = (rtag in pool_tags)
+            tag_type = "N"
+            if ftag_in_pool and rtag_in_pool:
+                tag_type = "B"
+            elif ftag_in_pool:
+                tag_type = "F"
+            elif rtag_in_pool:
+                tag_type = "R"
+            total_seqs = 0
+            header = ftag + "\t" + rtag + "\t"
+            footer = "\t" + tag_type + "\n"
+            if single_end:
+                for amplicon, amplicon_count in current_haps.items():
+                    tag_out.write(header + amplicon + "\t")
+                    tag_out.write(str(amplicon_count) + footer)
+                    total_seqs += amplicon_count
+            else:
+                for amplicon, amplicon_count in current_haps.items():
+                    tag_out.write(header + "\t".join(amplicon) + "\t")
+                    tag_out.write(str(amplicon_count) + footer)
+                    total_seqs += amplicon_count
+            tag_summary.write(header + str(len(current_haps)) + "\t")
+            tag_summary.write(str(total_seqs) + footer)
+        tag_summary.close()
+        tag_out.close()
+
+    def __process_single_end(self, read_filename, is_gzipped, tags_used):
         """Process single end read files.
 
         Read and separate single end read file into sample read files.
@@ -374,23 +455,54 @@ class sample_sorter():
             fastq name for read file
         is_gzipped : bool
             is input file gzipped?
-        output_directory : string
-            output directory path
-        output_prefix : string
-            output prefix for sample files
+
+        Returns
+        -------
+        hap : dict
+            with amplicon and tag combination information
 
         """
+        haps = {}
         if is_gzipped:
             infile = gzip.open(read_filename)
         else:
             infile = open(read_filename)
         for record in SeqIO.parse(infile, "fastq"):
-            (best_fprimer_pos, best_fprimer_mis, best_rprimer_pos,
-             best_rprimer_mis) = self.__find_primer_positions(record)
-            (bestftag, bestrtag) = self.__find_best_tag_match(ftag, rtag)
+            seq = record.seq
+            seq_rc = record.seq.reverse_complement()
+            (fstart, fend, rstart, rend, match_type) = self.__find_primer_pos(
+                seq, seq_rc)
+            self._primer_type_counts[match_type] += 1
+            if match_type == 1:
+                ftag = str(seq)[0:fstart]
+                rtag = str(seq_rc)[0:rstart]
+                amplicon = str(seq)[fend:(len(seq)-rend)]
+            elif match_type == 4:
+                ftag = str(seq_rc)[0:rstart]
+                rtag = str(seq)[0:fstart]
+                amplicon = str(seq_rc)[rend:(len(seq)-fend)]
+            else:
+                continue
+            if len(amplicon) == 0:
+                self._primer_type_counts[7] += 1
+                continue
+            best_ftag = self.__find_best_tag_match(ftag)
+            best_rtag = self.__find_best_tag_match(rtag)
+            tag_type = (best_ftag == "") + 2*(best_rtag == "")
+            if not tag_type:
+                self._tag_type_counts[match_type + tag_type - 1] += 1
+                continue
+            tag_combo = (best_ftag, best_rtag)
+            if tag_combo not in haps:
+                haps[tag_combo] = {}
+                haps[tag_combo][amplicon] = 0
+            elif amplicon not in haps[tag_combo]:
+                haps[tag_combo][amplicon] = 0
+            haps[tag_combo][amplicon] += 1
+        infile.close()
+        return (haps)
 
-    def __process_paired_end(self, read1_filename, read2_filename, is_gzipped,
-                             output_directory, output_prefix):
+    def __process_paired_end(self, read1_filename, read2_filename, is_gzipped):
         """Process paired end read files.
 
         Read and separate single end read file into sample read files.
@@ -403,70 +515,138 @@ class sample_sorter():
             fastq file for the second read
         is_gzipped : bool
             are the inputs gzipped?
-        output_directory : string
-            output directory path
-        output_prefix : string
-            output prefix for sample files
+
+        Returns
+        -------
+        haps : dict
+            with amplicon and tag combination information
 
         """
+        haps = {}
         if is_gzipped:
             infile1 = gzip.open(read1_filename)
             infile2 = gzip.open(read2_filename)
         else:
             infile1 = open(read1_filename)
             infile2 = open(read2_filename)
-        counter = 0
-        for (line1, line2) in zip(infile1, infile2):
-            counter += 1
-            if counter % 4 != 1:
+        for (record1, record2) in zip(SeqIO.parse(infile1, "fastq"),
+                                      SeqIO.parse(infile2, "fastq")):
+            seq1 = record1.seq
+            seq2 = record2.seq
+            (fstart, fend, rstart, rend, match_type) = self.__find_primer_pos(
+                seq1, seq2)
+            self._primer_type_counts[match_type] += 1
+            if match_type == 1:
+                ftag = str(seq1)[0:fstart]
+                rtag = str(seq2)[0:rstart]
+                amplicon = (str(seq1)[fend:], str(seq2)[rend:])
+            elif match_type == 4:
+                ftag = str(seq2)[0:rstart]
+                rtag = str(seq1)[0:fstart]
+                amplicon = (str(seq2)[rend:], str(seq1)[fend:])
+            else:
                 continue
-            
-        pass
+            best_ftag = self.__find_best_tag_match(ftag)
+            best_rtag = self.__find_best_tag_match(rtag)
+            tag_type = (best_ftag == "") + 2*(best_rtag == "")
+            if not tag_type:
+                self._tag_type_counts[match_type + tag_type - 1] += 1
+            tag_combo = (best_ftag, best_rtag)
+            if tag_combo not in haps:
+                haps[tag_combo] = {}
+                haps[tag_combo][amplicon] = 0
+            elif amplicon not in haps[tag_combo]:
+                haps[tag_combo][amplicon] = 0
+            haps[tag_combo][amplicon] += 1
+        infile1.close()
+        infile2.close()
+        return (haps)
 
-    def __find_primer_positions(self, fq_read1, fq_read2):
+    def __find_primer_pos(self, fq_read1, fq_read2):
         """Find primer positions for using the 5' and 3' sequences.
 
         Parameters
         ----------
-        fq_read1 : :obj: seqio record
+        fq_read1 : :obj: Bio seq object
             dna sequence from fastq file - read 1
-        fq_read2 : :obj: seqio record
-            dna sequence from fastq file - read 2 - or reverse of read 1, if
+        fq_read2 : :obj: Bio seq object
+            dna sequence from fastq file - read 2 - or rc of read 1, if
             single end sequence
 
         Returns
         -------
-        best_fprimer_position
-            Position on the sequence that is matching the forward primer
-        best_fprimer_mismatches
-            Number of mismatches on the sequence with best forward primer match
-        best_rprimer_position
-            Position on the sequence that is matching the reverse primer_errors
-        best_rprimer_mismatches
-            Number of mismatches on the sequence with best reverse primer match
+        int
+            Start of forward primer match
+        int
+            End of forward primer match
+        int
+            Start of reverse primer match
+        int
+            End of reverser primer match
+        int
+            Type of match
 
         """
+        read1_seq = str(fq_read1)
+        read2_seq = str(fq_read2)
+        match_type = 0  # no primers found
         # First find the forward primer in read 1, and reverse in read 2.
-        forwar_primer_match
+        # F in read 1 and R' in read2
+        (fstart, fend) = DU.find_first_match(self._frprims_rgx[0], read1_seq)
+        (rstart, rend) = DU.find_first_match(self._frprims_rgx[1], read2_seq)
+        if fstart != -1 and rstart != -1:
+            match_type = 1
+        elif fstart != -1 and rstart == -1:
+            match_type = 2
+        elif fstart == -1 and rstart != -1:
+            match_type = 3
+        if fstart != -1 or rstart != -1:
+            return((fstart, fend, rstart, rend, match_type))
 
-    def __find_best_tag_match(self, ftag, rtag):
+        # R in read 1 and F' in read2
+        (rstart, rend) = DU.find_first_match(self._rfprims_rgx[0], read1_seq)
+        (fstart, fend) = DU.find_first_match(self._rfprims_rgx[1], read2_seq)
+        if fstart != -1 and rstart != -1:
+            match_type = 4
+        elif rstart != -1 and fstart == -1:
+            match_type = 5
+        elif rstart == -1 and fstart != -1:
+            match_type = 6
+        if fstart != -1 or rstart != -1:
+            return((rstart, rend, fstart, fend, match_type))
+        return((fstart, fend, rstart, rend, match_type))
+
+    def __find_best_tag_match(self, tag):
         """Find the best tag for the given sequence.
 
         Function to find the best tag match given, the sequence.
 
         Parameters
         ----------
-        ftag : string
-            forward tag dna sequence of a read
-        rtag : string
-            reverse tag dna sequence of a read
+        tag : string
+            tag dna sequence of a read
 
         Returns
         -------
-        best_tag_name : string
-            name of the best string match, under the constraints
-        best_tag_mismatch : int
-            mismatch with the best tag sequence
+        best_tag : string
+            name of the best string match
 
         """
-        pass
+        # First figure out forward tag
+        best_dist = len(tag)
+        best_tag = ""
+        for tag_name in self._tag_dict:
+            tag_seq = self._tag_dict[tag_name]
+            cur_dist = DU.find_hamming_distance(tag_seq, tag)
+            if cur_dist < best_dist:
+                best_tag = tag_name
+                best_dist = cur_dist
+            elif cur_dist == best_dist:
+                if len(tag_seq) > len(self._tag_dict[best_tag]):
+                    best_tag = tag_name
+                elif len(tag_seq) == len(self._tag_dict[best_tag]):
+                    best_tag = ""
+                    break
+        if best_dist > self.tag_errors:
+            best_tag = ""
+        return(best_tag)

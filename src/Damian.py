@@ -58,10 +58,9 @@ def parse_cl_arguments():
                             mismatches in primer. (Default 0)", type=int,
                             default=0, metavar="PrimerMismatches",
                             dest="primer_mismatches")
-    sortParser.add_argument("-tm", "--tagMismatches", help="Number of \
-                            mismatches in tags. (Default 0)", type=int,
-                            default=0.0, metavar="TagMismatches",
-                            dest="tag_mismatches")
+    sortParser.add_argument("-tm", "--tagMismatches", help="Rate of mismatches \
+                            in tags. (Default 0)", type=float, default=0.0,
+                            metavar="TagMismatches", dest="tag_mismatches")
 #    sortParser.add_argument("-c", "--complexity_bases", help="Complexity \
 #                            bases present in tags", action="store_true")
     sortParser.add_argument("-mo", "--merge_overlap", help="Merge read1 and \
@@ -109,7 +108,6 @@ def parse_cl_arguments():
     filterParser.add_argument("-o", "--output_prefix", help="Prefix for \
                               output files", default="", metavar="OutPrefix",
                               dest="output_prefix")
-
     args = parser.parse_args()
     return(args)
 

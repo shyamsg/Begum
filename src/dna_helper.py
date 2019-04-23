@@ -30,6 +30,8 @@ AMB_REGEX_DICT : dict
 
 import regex
 
+from textdistance.hamming import distance
+
 DNA_UNAMBIGUOUS_CHARS = "ACGTUNacgtun"
 DNA_UNAMBIGUOUS_REV = "TGCAANtgcaan"
 DNA_AMBIGUOUS_CHARS = "ACGTURYSWKMBDHVNacgturyswkmbdhvn"
@@ -51,7 +53,7 @@ AMB_REGEX_DICT = {"A": r"A", "a": r"a", "C": r"C", "c": r"c", "G": r"G",
                   "N": r"[ACGT]", "n": r"[acgt]"}
 
 
-class dna_sequence(object):
+class dna_utility(object):
     """Helper class to manipulate dna sequences.
 
     This class has helper functions to manipulate dna sequences.
@@ -59,8 +61,7 @@ class dna_sequence(object):
     """
 
     @staticmethod
-    def convert_ambiguity_to_regex(sequence, mismatches=0,
-                                   preserve_case=False):
+    def conv_ambig_regex(sequence, mismatches=0, preserve_case=False):
         """Convert the ambigous bases to regular expressions.
 
         This function takes a dna sequence with ambiguous bases in it, and
@@ -76,23 +77,23 @@ class dna_sequence(object):
 
         Returns
         -------
-        string
-            dna sequence with modified ambiguity bases, ready for use in string
-            matching.
+        :obj: compiled regex obect
+            compiled dna regex with modified ambiguity bases, ready for use in
+            string matching.
 
         """
         if not preserve_case:   # convert to upper case if not preserve case
             sequence = sequence.upper()
-        dna_regex = r""
+        dna_regex = r"(?b)("  # best match set
         for c in sequence:
             dna_regex += AMB_REGEX_DICT[c]
-        dna_regex = dna_regex + r"{s<="+mismatches+r"}"
+        dna_regex = dna_regex + r"){s<="+mismatches+r"}"
         dna_regex = regex.compile(dna_regex)
         return dna_regex
 
     @staticmethod
-    def find_first_subsequence(matcher_regex, target_dna):
-        """Find first subsequnce of given sequence in an unambiguous sequence.
+    def find_first_match(matcher_regex, target_dna):
+        """Find first match of given sequence in an unambiguous sequence.
 
         Given a target sequence, find the first/best match of this target
         sequence in a given unambiguous dna sequence.
@@ -107,8 +108,43 @@ class dna_sequence(object):
         Returns
         -------
         int
-            position of best match (first if many), -1 if no matches
+            start position of best match (first if many), -1 if no matches
 
         """
-        matches = matcher_regex.search(target_dna)
-        firstmatch = matches.group(0)
+        firstmatch = matcher_regex.search(target_dna)
+        if firstmatch is None:
+            return((-1, -1))
+        else:
+            return(firstmatch.span())
+
+    @staticmethod
+    def find_hamming_distance(target_seq, source_seq, look_at_end=True):
+        """Find hamming distance between sequences.
+
+        Find the hamming distance between given sequences, assuming no
+        ambiguity in the sequences.
+
+        Parameters
+        ----------
+        target_seq :  string
+            The string to be searched for
+        sourse_seq :  strings
+            The string to be searced in
+        look_at_end : bool
+            If true, look for match at the end of string, else beginning
+
+        Returns
+        -------
+        dist : int
+            Substitution distance between the strings
+
+        """
+        tlen = len(target_seq)
+        slen = len(source_seq)
+        if tlen > slen:
+            return(tlen)
+        if look_at_end:
+            sseq = source_seq[(slen-tlen):]
+        else:
+            sseq = source_seq[0:tlen]
+        return(distance(target_seq, sseq))
