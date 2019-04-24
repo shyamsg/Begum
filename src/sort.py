@@ -84,8 +84,8 @@ class sample_sorter():
         self.merge_overlap = sorter_args.merge_overlap
         self.merge_errors = sorter_args.merge_errors
         ###################################################
-        self.tag_errors = sorter_args.tag_errors
-        self.primer_errors = sorter_args.primer_errors
+        self.tag_errors = sorter_args.tag_mismatches
+        self.primer_errors = sorter_args.primer_mismatches
         self.input_values_check()
 
     def input_values_check(self):
