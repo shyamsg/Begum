@@ -47,9 +47,7 @@ class sample_sorter():
 
     _tag_dict = {}
     _primer_pair = None
-    _primer_pair_rc = None
-    _frprims_rgx = None
-    _rfprims_rgx = None
+    _primers_rgx = None
     _samp_info = {}
     _pool_info = {}
     _merge = False
@@ -129,23 +127,21 @@ class sample_sorter():
         self.logger.info("Setting foward primer to " + fwd_sequence)
         self.logger.info("Setting reverse primer to " + rev_sequence)
         self._primer_pair = (fwd_primer, rev_primer)
-        self._primer_pair_rc = (fwd_primer.reverse_complement(),
-                                rev_primer.reverse_complement())
-
+ 
     def _conv_primers_regex(self):
         """Convert primer seqs to regexes."""
-        self._frprims_rgx = (DU.conv_ambig_regex(str(self._primer_pair[0]),
+        self._primers_rgx = (DU.conv_ambig_regex(str(self._primer_pair[0]),
                                                  mismatches=self.primer_errors,
                                                  preserve_case=False),
-                             DU.conv_ambig_regex(str(self._primer_pair_rc[1]),
+                             DU.conv_ambig_regex(str(self._primer_pair[1]),
                                                  mismatches=self.primer_errors,
                                                  preserve_case=False))
-        self._rfprims_rgx = (DU.conv_ambig_regex(str(self._primer_pair[1]),
-                                                 mismatches=self.primer_errors,
-                                                 preserve_case=False),
-                             DU.conv_ambig_regex(str(self._primer_pair_rc[0]),
-                                                 mismatches=self.primer_errors,
-                                                 preserve_case=False))
+        # self._rfprims_rgx = (DU.conv_ambig_regex(str(self._primer_pair[1]),
+        #                                          mismatches=self.primer_errors,
+        #                                          preserve_case=False),
+        #                      DU.conv_ambig_regex(str(self._primer_pair_rc[0]),
+        #                                          mismatches=self.primer_errors,
+        #                                          preserve_case=False))
 
     def read_primer_file(self, primer_filename):
         """Process the primer file.
@@ -215,8 +211,8 @@ class sample_sorter():
                 self.logger.error("Repeat tag name: " + tokens[0])
                 raise IOError(tokens[0] + " already present in file.")
             forwardTag = Seq(tokens[1], IUPAC.IUPACUnambiguousDNA())
-            reverseTag = forwardTag.reverse_complement()
-            self._tag_dict[tokens[0]] = (forwardTag, reverseTag)
+            #reverseTag = forwardTag.reverse_complement()
+            self._tag_dict[tokens[0]] = forwardTag
         self.logger.info("Read " + str(len(self._tag_dict)) + " valid tag \
                          combinations.")
         tag_file.close()
@@ -251,9 +247,9 @@ class sample_sorter():
                               line)
             (sample, fwd_tagname, rev_tagname, pool_name) = toks
             if pool_name not in self._pool_info:
-                self.logger.error("Pool name " + pool_name + "not found in " +
+                self.logger.error("Pool name " + pool_name + " not found in " +
                                   "pool file.")
-                raise KeyError("Pool name " + pool_name + "not found in " +
+                raise KeyError("Pool name " + pool_name + " not found in " +
                                "pool file.")
             # If this sample is in a new pool, then make that key
             if pool_name not in self._samp_info:
@@ -284,9 +280,9 @@ class sample_sorter():
             replicate_num = sample_count[sample]
             # update pool info
             self._samp_info[pool_name][tag_pair] = [sample, replicate_num]
-        self.logger.info("Information present for " + len(self._pool_info) +
+        self.logger.info("Information present for " + str(len(self._pool_info)) +
                          " pools.")
-        self.logger.info("Read details for " + len(sample_count) + "samples.")
+        self.logger.info("Read details for " + str(len(sample_count)) + "samples.")
         samp_file.close()
 
     def read_pool_file(self, pool_info_filename):
@@ -349,7 +345,7 @@ class sample_sorter():
             raise ValueError("A combination of paired end and single end reads \
                               are give in the pool information file. We only \
                               allow one type of read across all pools.")
-        self.logger.info("Read pool information for " + len(self._pool_info) +
+        self.logger.info("Read pool information for " + str(len(self._pool_info)) +
                          " pools.")
         pool_file.close()
 
@@ -375,14 +371,14 @@ class sample_sorter():
             read2_filename = self._pool_info[pool_name]["read2"]
             is_gzipped = self._pool_info[pool_name]["zipped"]
             outname = output_directory + "/" + output_prefix
-            outname += + "_" + pool_name
+            outname += "_" + pool_name
             if read2_filename == "":
                 haps = self.__process_single_end(read1_filename, is_gzipped)
-                self.__write_out_files(haps, outname, single_end=True)
+                self.__write_out_files(haps, outname, pool_name, single_end=True)
             else:
                 haps = self.__process_paired_end(read1_filename,
                                                  read2_filename, is_gzipped)
-                self.__write_out_files(haps, outname, single_end=False)
+                self.__write_out_files(haps, outname, pool_name, single_end=False)
 
     def __write_out_files(self, haps, outprefix, pool_name, single_end):
         """Write the amplicons to the output file.
@@ -446,20 +442,20 @@ class sample_sorter():
         # Write the summary file.
         tag_summary = open(outprefix + ".summaryCounts", "w")
         tag_summary.write("Tag1\tTag2\tUniqSeqs\tTotalSeqs\tType\n")
-        tag_summary.write("Correct combination of tags used in pool")
-        tag_summary.write("----------------------------------------")
+        tag_summary.write("Correct combination of tags used in pool\n")
+        tag_summary.write("----------------------------------------\n")
         tag_summary.write(summary_lines["C"])
-        tag_summary.write("Both tags used in pool, but not this combination")
-        tag_summary.write("------------------------------------------------")
+        tag_summary.write("Both tags used in pool, but not this combination\n")
+        tag_summary.write("------------------------------------------------\n")
         tag_summary.write(summary_lines["B"])
-        tag_summary.write("Only forward tag used in pool, reverse not found")
-        tag_summary.write("------------------------------------------------")
+        tag_summary.write("Only forward tag used in pool, reverse not found\n")
+        tag_summary.write("------------------------------------------------\n")
         tag_summary.write(summary_lines["F"])
-        tag_summary.write("Only reverse tag used in pool, forward not found")
-        tag_summary.write("------------------------------------------------")
+        tag_summary.write("Only reverse tag used in pool, forward not found\n")
+        tag_summary.write("------------------------------------------------\n")
         tag_summary.write(summary_lines["R"])
-        tag_summary.write("Neither tag used in this pool")
-        tag_summary.write("-----------------------------")
+        tag_summary.write("Neither tag used in this pool\n")
+        tag_summary.write("-----------------------------\n")
         tag_summary.write(summary_lines["N"])
         tag_summary.close()
 
@@ -611,8 +607,8 @@ class sample_sorter():
         match_type = 0  # no primers found
         # First find the forward primer in read 1, and reverse in read 2.
         # F in read 1 and R' in read2
-        (fstart, fend) = DU.find_first_match(self._frprims_rgx[0], read1_seq)
-        (rstart, rend) = DU.find_first_match(self._frprims_rgx[1], read2_seq)
+        (fstart, fend) = DU.find_first_match(self._primers_rgx[0], read1_seq)
+        (rstart, rend) = DU.find_first_match(self._primers_rgx[1], read2_seq)
         if fstart != -1 and rstart != -1:
             match_type = 1
         elif fstart != -1 and rstart == -1:
@@ -623,8 +619,8 @@ class sample_sorter():
             return((fstart, fend, rstart, rend, match_type))
 
         # R in read 1 and F' in read2
-        (rstart, rend) = DU.find_first_match(self._rfprims_rgx[0], read1_seq)
-        (fstart, fend) = DU.find_first_match(self._rfprims_rgx[1], read2_seq)
+        (rstart, rend) = DU.find_first_match(self._primers_rgx[1], read1_seq)
+        (fstart, fend) = DU.find_first_match(self._primers_rgx[0], read2_seq)
         if fstart != -1 and rstart != -1:
             match_type = 4
         elif rstart != -1 and fstart == -1:
@@ -652,7 +648,7 @@ class sample_sorter():
 
         """
         # First figure out forward tag
-        best_dist = len(tag)
+        best_dist = len(tag) + 100
         best_tag = ""
         for tag_name in self._tag_dict:
             tag_seq = self._tag_dict[tag_name]

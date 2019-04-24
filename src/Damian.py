@@ -129,8 +129,9 @@ def main():
         sorter = sort.sample_sorter(args)
         sorter.read_tag_file(args.tags)
         sorter.read_primer_file(args.primers)
+        sorter.read_pool_file(args.pool)
         sorter.read_sample_information_file(args.sampleInfo)
-        sorter.process_read_file()
+        sorter.process_read_file(args.output_directory, args.output_prefix)
     elif args.command == "filter":
         logger.info("Running the filter module.")
 

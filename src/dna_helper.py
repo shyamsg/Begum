@@ -87,7 +87,7 @@ class dna_utility(object):
         dna_regex = r"(?b)("  # best match set
         for c in sequence:
             dna_regex += AMB_REGEX_DICT[c]
-        dna_regex = dna_regex + r"){s<="+mismatches+r"}"
+        dna_regex = dna_regex + r"){s<="+str(mismatches)+r"}"
         dna_regex = regex.compile(dna_regex)
         return dna_regex
 
