@@ -217,7 +217,7 @@ class sample_sorter():
             forwardTag = Seq(tokens[1], IUPAC.IUPACUnambiguousDNA())
             reverseTag = forwardTag.reverse_complement()
             self._tag_dict[tokens[0]] = (forwardTag, reverseTag)
-        self.logger.info("Read " + len(self._tag_dict) + " valid tag \
+        self.logger.info("Read " + str(len(self._tag_dict)) + " valid tag \
                          combinations.")
         tag_file.close()
 
