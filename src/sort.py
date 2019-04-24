@@ -127,7 +127,7 @@ class sample_sorter():
         self.logger.info("Setting foward primer to " + fwd_sequence)
         self.logger.info("Setting reverse primer to " + rev_sequence)
         self._primer_pair = (fwd_primer, rev_primer)
- 
+
     def _conv_primers_regex(self):
         """Convert primer seqs to regexes."""
         self._primers_rgx = (DU.conv_ambig_regex(str(self._primer_pair[0]),
@@ -211,7 +211,6 @@ class sample_sorter():
                 self.logger.error("Repeat tag name: " + tokens[0])
                 raise IOError(tokens[0] + " already present in file.")
             forwardTag = Seq(tokens[1], IUPAC.IUPACUnambiguousDNA())
-            #reverseTag = forwardTag.reverse_complement()
             self._tag_dict[tokens[0]] = forwardTag
         self.logger.info("Read " + str(len(self._tag_dict)) + " valid tag \
                          combinations.")
@@ -280,9 +279,10 @@ class sample_sorter():
             replicate_num = sample_count[sample]
             # update pool info
             self._samp_info[pool_name][tag_pair] = [sample, replicate_num]
-        self.logger.info("Information present for " + str(len(self._pool_info)) +
-                         " pools.")
-        self.logger.info("Read details for " + str(len(sample_count)) + "samples.")
+        self.logger.info("Information for " + str(len(self._pool_info)) +
+                         " pools in file.")
+        self.logger.info("Read details for " + str(len(sample_count)) +
+                         " samples.")
         samp_file.close()
 
     def read_pool_file(self, pool_info_filename):
@@ -345,7 +345,7 @@ class sample_sorter():
             raise ValueError("A combination of paired end and single end reads \
                               are give in the pool information file. We only \
                               allow one type of read across all pools.")
-        self.logger.info("Read pool information for " + str(len(self._pool_info)) +
+        self.logger.info("Read information for " + str(len(self._pool_info)) +
                          " pools.")
         pool_file.close()
 
@@ -374,11 +374,13 @@ class sample_sorter():
             outname += "_" + pool_name
             if read2_filename == "":
                 haps = self.__process_single_end(read1_filename, is_gzipped)
-                self.__write_out_files(haps, outname, pool_name, single_end=True)
+                self.__write_out_files(haps, outname, pool_name,
+                                       single_end=True)
             else:
                 haps = self.__process_paired_end(read1_filename,
                                                  read2_filename, is_gzipped)
-                self.__write_out_files(haps, outname, pool_name, single_end=False)
+                self.__write_out_files(haps, outname, pool_name,
+                                       single_end=False)
 
     def __write_out_files(self, haps, outprefix, pool_name, single_end):
         """Write the amplicons to the output file.
@@ -440,6 +442,22 @@ class sample_sorter():
             summary_lines[tag_type] += (str(total_seqs) + footer)
         tag_out.close()
         # Write the summary file.
+        self.__write_summary_file(outprefix, summary_lines)
+
+    def __write_summary_file(self, outprefix, summary_lines):
+        """Write the summary file.
+
+        Write summary file based on the summary lines from the write out files
+        function.
+
+        Parameters
+        ----------
+        outprefix : string
+            Prefix for output summary file
+        summary_lines : dict
+            Info on different types of output tag combinations
+
+        """
         tag_summary = open(outprefix + ".summaryCounts", "w")
         tag_summary.write("Tag1\tTag2\tUniqSeqs\tTotalSeqs\tType\n")
         tag_summary.write("Correct combination of tags used in pool\n")
