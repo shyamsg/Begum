@@ -58,7 +58,6 @@ class sample_sorter():
     merge = False
     merge_overlap = 10
     tag_errors = 0.0
-    complexity_bases = False
     primer_errors = 0
     output_directory = ""
     output_prefix = ""
@@ -85,7 +84,6 @@ class sample_sorter():
         self.merge_overlap = sorter_args.merge_overlap
         self.merge_errors = sorter_args.merge_errors
         ###################################################
-        self.complexity_bases = sorter_args.complexity_bases
         self.tag_errors = sorter_args.tag_errors
         self.primer_errors = sorter_args.primer_errors
         self.input_values_check()
