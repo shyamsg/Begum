@@ -31,11 +31,11 @@ def parse_cl_arguments():
 
     # Add parser for the sorting step
     sortParser = subparser.add_parser("sort")
-    sortParser.add_argument("-1", "--fq1", help="Merged fastq file or \
-                            read 1 of paired end", metavar="Fastq1",
-                            required=True, dest="fastq1")
-    sortParser.add_argument("-2", "--fq2", help="Read 2 of paired end",
-                            metavar="Fastq2", dest="fastq2", default="")
+    # sortParser.add_argument("-1", "--fq1", help="Merged fastq file or \
+    #                         read 1 of paired end", metavar="Fastq1",
+    #                         required=True, dest="fastq1")
+    # sortParser.add_argument("-2", "--fq2", help="Read 2 of paired end",
+    #                         metavar="Fastq2", dest="fastq2", default="")
     sortParser.add_argument("-p", "--primers", help="File with forward and \
                             reverse primer sequence\n(Format: ForwardPrimer \
                             ReversePrimer)", required=False, default="",

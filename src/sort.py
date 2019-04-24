@@ -405,23 +405,25 @@ class sample_sorter():
         """
         # Make a set of tags used in this pool.
         pool_tags = set()
+        pool_tag_pairs = []
         for tag_pair in self._samp_info[pool_name]:
             pool_tags.update(tag_pair)
-
+            pool_tag_pairs.append(tag_pair)
         tag_out = open(outprefix + ".tagInfo", "w")
-        tag_summary = open(outprefix + ".summaryCounts", "w")
         if single_end:
             tag_out.write("Tag1\tTag2\tSeq\tCount\tType\n")
         else:
             tag_out.write("Tag1\tTag2\tFSeq\tRSeq\tCount\tType\n")
-        tag_summary.write("Tag1\tTag2\tUniqSeqs\tTotalSeqs\tType\n")
         for tag_pair, current_haps in haps.items():
             (ftag, rtag) = tag_pair
             ftag_in_pool = (ftag in pool_tags)
             rtag_in_pool = (rtag in pool_tags)
             tag_type = "N"
             if ftag_in_pool and rtag_in_pool:
-                tag_type = "B"
+                if tag_pair in pool_tag_pairs:
+                    tag_type = "C"
+                else:
+                    tag_type = "B"
             elif ftag_in_pool:
                 tag_type = "F"
             elif rtag_in_pool:
@@ -429,6 +431,7 @@ class sample_sorter():
             total_seqs = 0
             header = ftag + "\t" + rtag + "\t"
             footer = "\t" + tag_type + "\n"
+            summary_lines = {"C": "", "B": "", "F": "", "R": "", "N": ""}
             if single_end:
                 for amplicon, amplicon_count in current_haps.items():
                     tag_out.write(header + amplicon + "\t")
@@ -439,10 +442,28 @@ class sample_sorter():
                     tag_out.write(header + "\t".join(amplicon) + "\t")
                     tag_out.write(str(amplicon_count) + footer)
                     total_seqs += amplicon_count
-            tag_summary.write(header + str(len(current_haps)) + "\t")
-            tag_summary.write(str(total_seqs) + footer)
-        tag_summary.close()
+            summary_lines[tag_type] += (header + str(len(current_haps)) + "\t")
+            summary_lines[tag_type] += (str(total_seqs) + footer)
         tag_out.close()
+        # Write the summary file.
+        tag_summary = open(outprefix + ".summaryCounts", "w")
+        tag_summary.write("Tag1\tTag2\tUniqSeqs\tTotalSeqs\tType\n")
+        tag_summary.write("Correct combination of tags used in pool")
+        tag_summary.write("----------------------------------------")
+        tag_summary.write(summary_lines["C"])
+        tag_summary.write("Both tags used in pool, but not this combination")
+        tag_summary.write("------------------------------------------------")
+        tag_summary.write(summary_lines["B"])
+        tag_summary.write("Only forward tag used in pool, reverse not found")
+        tag_summary.write("------------------------------------------------")
+        tag_summary.write(summary_lines["F"])
+        tag_summary.write("Only reverse tag used in pool, forward not found")
+        tag_summary.write("------------------------------------------------")
+        tag_summary.write(summary_lines["R"])
+        tag_summary.write("Neither tag used in this pool")
+        tag_summary.write("-----------------------------")
+        tag_summary.write(summary_lines["N"])
+        tag_summary.close()
 
     def __process_single_end(self, read_filename, is_gzipped, tags_used):
         """Process single end read files.
