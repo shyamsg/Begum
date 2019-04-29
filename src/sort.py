@@ -52,7 +52,7 @@ class sample_sorter():
     _pool_info = {}
     _merge = False
     _primer_type_counts = [0, 0, 0, 0, 0, 0, 0, 0]
-    _tag_type_counts = [0, 0, 0, 0, 0, 0, 0]
+    _tag_type_counts = [0, 0, 0, 0, 0, 0, 0, 0]
     merge = False
     merge_overlap = 10
     tag_errors = 0.0
@@ -61,7 +61,7 @@ class sample_sorter():
     output_prefix = ""
     logger = None
 
-    def __init__(self, sorter_args):
+    def __init__(self, sorter_args, logger):
         """Construct a sorter class.
 
         Class to sort the read files to get sample wise files, using the tag
@@ -74,7 +74,7 @@ class sample_sorter():
             namespace from argparse module
 
         """
-        self.logger = logging.getLogger("sample_sorter")
+        self.logger = logger
         ###################################################
         # The next 2 options are not user since           #
         # they are not implemented                        #
@@ -84,6 +84,8 @@ class sample_sorter():
         ###################################################
         self.tag_errors = sorter_args.tag_mismatches
         self.primer_errors = sorter_args.primer_mismatches
+        self.output_directory = sorter_args.output_directory
+        self.output_prefix = sorter_args.output_prefix
         self.input_values_check()
 
     def input_values_check(self):
@@ -136,12 +138,67 @@ class sample_sorter():
                              DU.conv_ambig_regex(str(self._primer_pair[1]),
                                                  mismatches=self.primer_errors,
                                                  preserve_case=False))
-        # self._rfprims_rgx = (DU.conv_ambig_regex(str(self._primer_pair[1]),
-        #                                          mismatches=self.primer_errors,
-        #                                          preserve_case=False),
-        #                      DU.conv_ambig_regex(str(self._primer_pair_rc[0]),
-        #                                          mismatches=self.primer_errors,
-        #                                          preserve_case=False))
+    
+    def __log_in_details(self):
+        """Print the information about the sorter
+
+        Print detailed information on the dictionaries in this class.
+
+        """
+        self.logger.debug("Sorter details")
+        self.logger.debug("--------------")
+        self.logger.debug("Primers:")
+        self.logger.debug("  Fwd: " + self._primer_pair[0])
+        self.logger.debug("  Rev: " + self._primer_pair[1])
+        self.logger.debug("  # mismatches allowed: " + str(self.primer_errors))
+        self.logger.debug("Tags:")
+        for tag_name, tag_seq in self._tag_dict.items():
+            self.logger.debug("  " + tag_name + ": " + tag_seq)
+        self.logger.debug("  # of mismatches allowed: " + str(self.tag_errors))
+        self.logger.debug("Pools and samples:")
+        for pool_name, fastqs in self._pool_info.items():
+            logline = "  " + pool_name + ": " 
+            logline += " ".join([(x + ":" + str(y)) for x,y in fastqs.items()])
+            self.logger.debug(logline)
+            cur_samples = self._samp_info[pool_name]
+            for tag_pair, samp in cur_samples.items():
+                logline = ("    " + "\t".join(tag_pair) + "\t")
+                logline += ("\t".join([str(x) for x in samp]))
+                self.logger.debug(logline)
+        self.logger.debug("Output details:")
+        self.logger.debug("  Directory: " + self.output_directory)
+        self.logger.debug("  Prefix: " + self.output_prefix)
+        
+    def __log_out_details(self):
+        """Print primer and tag type count details.
+        
+        Print all the details on the primer types founds and the tag type 
+        found in the pool.
+        """
+        self.logger.info("Primer match type details")
+        self.logger.info("-------------------------")
+        self.logger.info("  Neither primer       :" + str(self._primer_type_counts[0]))
+        self.logger.info("  Both F-R primer      :" + str(self._primer_type_counts[1]))
+        self.logger.info("  F primer, no R primer:" + str(self._primer_type_counts[2]))
+        self.logger.info("  no F primer, R primer:" + str(self._primer_type_counts[3]))
+        self.logger.info("  Both R-F primer      :" + str(self._primer_type_counts[4]))
+        self.logger.info("  R primer, no F primer:" + str(self._primer_type_counts[5]))
+        self.logger.info("  no R primer, F primer:" + str(self._primer_type_counts[6]))
+        self.logger.info("  No barcode (SE only) :" + str(self._primer_type_counts[7]))
+        self.logger.info("Tag match type details")
+        self.logger.info("----------------------")
+        self.logger.info("  F-R primer orientation")
+        self.logger.info("    Both tags            :" + str(self._tag_type_counts[0]))
+        self.logger.info("    no F tag, R tag found:" + str(self._tag_type_counts[1]))
+        self.logger.info("    F tag, no R tag found:" + str(self._tag_type_counts[2]))
+        self.logger.info("    Neither tag found    :" + str(self._tag_type_counts[3]))
+        self.logger.info("  R-F primer orientation")
+        self.logger.info("    Both tags            :" + str(self._tag_type_counts[4]))
+        self.logger.info("    no F tag, R tag found:" + str(self._tag_type_counts[5]))
+        self.logger.info("    F tag, no R tag found:" + str(self._tag_type_counts[6]))
+        self.logger.info("    Neither tag found    :" + str(self._tag_type_counts[7]))
+
+        
 
     def read_primer_file(self, primer_filename):
         """Process the primer file.
@@ -349,38 +406,39 @@ class sample_sorter():
                          " pools.")
         pool_file.close()
 
-    def process_read_file(self, output_directory, output_prefix):
+    def process_read_file(self):
         """Process the read file to create per sample read files.
 
         Read the paired-end or single end fastq (possibly gzipped) file and
         process it to separate it into the different samples, as defined in the
         sample information, tag and pool information data in this class.
 
-        Parameters
-        ----------
-        output_directory : string
-            output directory path
-        output_prefix : string
-            output prefix for sample files
-
         """
+        # First print out the details :)
+        self.__log_in_details()
         # figure out for each pool, what is going on.
         for pool_name in self._pool_info:
             self.logger.debug("Processing reads for pool " + pool_name)
             read1_filename = self._pool_info[pool_name]["read1"]
             read2_filename = self._pool_info[pool_name]["read2"]
             is_gzipped = self._pool_info[pool_name]["zipped"]
-            outname = output_directory + "/" + output_prefix
+            outname = self.output_directory + "/" + self.output_prefix
             outname += "_" + pool_name
+            self.logger.debug("Read1 file:" + read1_filename)
+            self.logger.debug("Read2 file:" + read2_filename)
+            self.logger.debug("Zip status:" + str(is_gzipped))
             if read2_filename == "":
+                self.logger.debug("Processing single end files.")
                 haps = self.__process_single_end(read1_filename, is_gzipped)
                 self.__write_out_files(haps, outname, pool_name,
                                        single_end=True)
             else:
+                self.logger.debug("Processing paired end files.")
                 haps = self.__process_paired_end(read1_filename,
                                                  read2_filename, is_gzipped)
                 self.__write_out_files(haps, outname, pool_name,
                                        single_end=False)
+        self.__log_out_details()
 
     def __write_out_files(self, haps, outprefix, pool_name, single_end):
         """Write the amplicons to the output file.
@@ -400,6 +458,7 @@ class sample_sorter():
 
         """
         # Make a set of tags used in this pool.
+        self.logger.debug("Writing output files.")
         pool_tags = set()
         pool_tag_pairs = []
         for tag_pair in self._samp_info[pool_name]:
@@ -441,6 +500,7 @@ class sample_sorter():
             summary_lines[tag_type] += (header + str(len(current_haps)) + "\t")
             summary_lines[tag_type] += (str(total_seqs) + footer)
         tag_out.close()
+        self.logger.debug("Finished writing output files.")
         # Write the summary file.
         self.__write_summary_file(outprefix, summary_lines)
 
@@ -458,6 +518,7 @@ class sample_sorter():
             Info on different types of output tag combinations
 
         """
+        self.logger.debug("Writing summary file.")
         tag_summary = open(outprefix + ".summaryCounts", "w")
         tag_summary.write("Tag1\tTag2\tUniqSeqs\tTotalSeqs\tType\n")
         tag_summary.write("Correct combination of tags used in pool\n")
@@ -476,6 +537,8 @@ class sample_sorter():
         tag_summary.write("-----------------------------\n")
         tag_summary.write(summary_lines["N"])
         tag_summary.close()
+        self.logger.debug("Finished writing summary file.")
+
 
     def __process_single_end(self, read_filename, is_gzipped, tags_used):
         """Process single end read files.
@@ -522,9 +585,11 @@ class sample_sorter():
             best_ftag = self.__find_best_tag_match(ftag)
             best_rtag = self.__find_best_tag_match(rtag)
             tag_type = (best_ftag == "") + 2*(best_rtag == "")
-            if not tag_type:
-                self._tag_type_counts[match_type + tag_type - 1] += 1
+            self._tag_type_counts[4*(match_type==4) + tag_type] += 1
+            # At least one of the two tags was not found :(
+            if tag_type:
                 continue
+            # Both tags found
             tag_combo = (best_ftag, best_rtag)
             if tag_combo not in haps:
                 haps[tag_combo] = {}
@@ -582,8 +647,11 @@ class sample_sorter():
             best_ftag = self.__find_best_tag_match(ftag)
             best_rtag = self.__find_best_tag_match(rtag)
             tag_type = (best_ftag == "") + 2*(best_rtag == "")
-            if not tag_type:
-                self._tag_type_counts[match_type + tag_type - 1] += 1
+            self._tag_type_counts[4*(match_type==4) + tag_type] += 1
+            # At least one of the two tags was not found :(
+            if tag_type:
+                continue
+            # Both tags found
             tag_combo = (best_ftag, best_rtag)
             if tag_combo not in haps:
                 haps[tag_combo] = {}

@@ -126,12 +126,12 @@ def main():
     args = parse_cl_arguments()
     if args.command == "sort":
         logger.info("Running the sorting module.")
-        sorter = sort.sample_sorter(args)
+        sorter = sort.sample_sorter(args, logger)
         sorter.read_tag_file(args.tags)
         sorter.read_primer_file(args.primers)
         sorter.read_pool_file(args.pool)
         sorter.read_sample_information_file(args.sampleInfo)
-        sorter.process_read_file(args.output_directory, args.output_prefix)
+        sorter.process_read_file()
     elif args.command == "filter":
         logger.info("Running the filter module.")
 
