@@ -8,7 +8,6 @@ DADA2 downstream - maybe.
 """
 
 import gzip
-import logging
 
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
@@ -138,9 +137,9 @@ class sample_sorter():
                              DU.conv_ambig_regex(str(self._primer_pair[1]),
                                                  mismatches=self.primer_errors,
                                                  preserve_case=False))
-    
+
     def __log_in_details(self):
-        """Print the information about the sorter
+        """Print the information about the sorter.
 
         Print detailed information on the dictionaries in this class.
 
@@ -157,50 +156,52 @@ class sample_sorter():
         self.logger.debug("  # of mismatches allowed: " + str(self.tag_errors))
         self.logger.debug("Pools and samples:")
         for pool_name, fastqs in self._pool_info.items():
-            logline = "  " + pool_name + ": " 
-            logline += " ".join([(x + ":" + str(y)) for x,y in fastqs.items()])
-            self.logger.debug(logline)
+            log = "  " + pool_name + ": "
+            log += " ".join([(x + ":" + str(y)) for x, y in fastqs.items()])
+            self.logger.debug(log)
             cur_samples = self._samp_info[pool_name]
             for tag_pair, samp in cur_samples.items():
-                logline = ("    " + "\t".join(tag_pair) + "\t")
-                logline += ("\t".join([str(x) for x in samp]))
-                self.logger.debug(logline)
+                log = ("    " + "\t".join(tag_pair) + "\t")
+                log += ("\t".join([str(x) for x in samp]))
+                self.logger.debug(log)
         self.logger.debug("Output details:")
         self.logger.debug("  Directory: " + self.output_directory)
         self.logger.debug("  Prefix: " + self.output_prefix)
-        
+
     def __log_out_details(self):
         """Print primer and tag type count details.
-        
-        Print all the details on the primer types founds and the tag type 
+
+        Print all the details on the primer types founds and the tag type
         found in the pool.
         """
+        ptc = [str(x) for x in self._primer_type_counts]
         self.logger.info("Primer match type details")
         self.logger.info("-------------------------")
-        self.logger.info("  Neither primer       :" + str(self._primer_type_counts[0]))
-        self.logger.info("  Both F-R primer      :" + str(self._primer_type_counts[1]))
-        self.logger.info("  F primer, no R primer:" + str(self._primer_type_counts[2]))
-        self.logger.info("  no F primer, R primer:" + str(self._primer_type_counts[3]))
-        self.logger.info("  Both R-F primer      :" + str(self._primer_type_counts[4]))
-        self.logger.info("  R primer, no F primer:" + str(self._primer_type_counts[5]))
-        self.logger.info("  no R primer, F primer:" + str(self._primer_type_counts[6]))
-        self.logger.info("  No barcode (SE only) :" + str(self._primer_type_counts[7]))
+        self.logger.info("  Neither primer       :" + ptc[0])
+        self.logger.info("  Both F-R primer      :" + ptc[1])
+        self.logger.info("  F primer, no R primer:" + ptc[2])
+        self.logger.info("  no F primer, R primer:" + ptc[3])
+        self.logger.info("  Both R-F primer      :" + ptc[4])
+        self.logger.info("  R primer, no F primer:" + ptc[5])
+        self.logger.info("  no R primer, F primer:" + ptc[6])
+        self.logger.info("  No barcode (SE only) :" + ptc[7])
+        ttc = [str(x) for x in self._tag_type_counts]
         self.logger.info("Tag match type details")
         self.logger.info("----------------------")
         self.logger.info("  F-R primer orientation")
-        self.logger.info("    Both tags            :" + str(self._tag_type_counts[0]))
-        self.logger.info("    no F tag, R tag found:" + str(self._tag_type_counts[1]))
-        self.logger.info("    F tag, no R tag found:" + str(self._tag_type_counts[2]))
-        self.logger.info("    Neither tag found    :" + str(self._tag_type_counts[3]))
+        self.logger.info("    Both tags            :" + ttc[0])
+        self.logger.info("    no F tag, R tag found:" + ttc[1])
+        self.logger.info("    F tag, no R tag found:" + ttc[2])
+        self.logger.info("    Neither tag found    :" + ttc[3])
         self.logger.info("  R-F primer orientation")
-        self.logger.info("    Both tags            :" + str(self._tag_type_counts[4]))
-        self.logger.info("    no F tag, R tag found:" + str(self._tag_type_counts[5]))
-        self.logger.info("    F tag, no R tag found:" + str(self._tag_type_counts[6]))
-        self.logger.info("    Neither tag found    :" + str(self._tag_type_counts[7]))
+        self.logger.info("    Both tags            :" + ttc[4])
+        self.logger.info("    no F tag, R tag found:" + ttc[5])
+        self.logger.info("    F tag, no R tag found:" + ttc[6])
+        self.logger.info("    Neither tag found    :" + ttc[7])
         self.__reset_counts()
 
     def __reset_counts(self):
-        """Reset counts of tag and primer matches. """
+        """Reset counts of tag and primer matches."""
         for index in range(len(self._primer_type_counts)):
             self._primer_type_counts[index] = 0
         for index in range(len(self._tag_type_counts)):
@@ -546,7 +547,6 @@ class sample_sorter():
         tag_summary.close()
         self.logger.debug("Finished writing summary file.")
 
-
     def __process_single_end(self, read_filename, is_gzipped):
         """Process single end read files.
 
@@ -592,7 +592,7 @@ class sample_sorter():
             best_ftag = self.__find_best_tag_match(ftag)
             best_rtag = self.__find_best_tag_match(rtag)
             tag_type = (best_ftag == "") + 2*(best_rtag == "")
-            self._tag_type_counts[4*(match_type==4) + tag_type] += 1
+            self._tag_type_counts[4*(match_type == 4) + tag_type] += 1
             # At least one of the two tags was not found :(
             if tag_type:
                 continue
@@ -654,7 +654,7 @@ class sample_sorter():
             best_ftag = self.__find_best_tag_match(ftag)
             best_rtag = self.__find_best_tag_match(rtag)
             tag_type = (best_ftag == "") + 2*(best_rtag == "")
-            self._tag_type_counts[4*(match_type==4) + tag_type] += 1
+            self._tag_type_counts[4*(match_type == 4) + tag_type] += 1
             # At least one of the two tags was not found :(
             if tag_type:
                 continue
