@@ -197,8 +197,14 @@ class sample_sorter():
         self.logger.info("    no F tag, R tag found:" + str(self._tag_type_counts[5]))
         self.logger.info("    F tag, no R tag found:" + str(self._tag_type_counts[6]))
         self.logger.info("    Neither tag found    :" + str(self._tag_type_counts[7]))
+        self.__reset_counts()
 
-        
+    def __reset_counts(self):
+        """Reset counts of tag and primer matches. """
+        for index in range(len(self._primer_type_counts)):
+            self._primer_type_counts[index] = 0
+        for index in range(len(self._tag_type_counts)):
+            self._tag_type_counts[index] = 0
 
     def read_primer_file(self, primer_filename):
         """Process the primer file.
@@ -432,13 +438,14 @@ class sample_sorter():
                 haps = self.__process_single_end(read1_filename, is_gzipped)
                 self.__write_out_files(haps, outname, pool_name,
                                        single_end=True)
+                self.__log_out_details()
             else:
                 self.logger.debug("Processing paired end files.")
                 haps = self.__process_paired_end(read1_filename,
                                                  read2_filename, is_gzipped)
                 self.__write_out_files(haps, outname, pool_name,
                                        single_end=False)
-        self.__log_out_details()
+                self.__log_out_details()
 
     def __write_out_files(self, haps, outprefix, pool_name, single_end):
         """Write the amplicons to the output file.
@@ -464,6 +471,7 @@ class sample_sorter():
         for tag_pair in self._samp_info[pool_name]:
             pool_tags.update(tag_pair)
             pool_tag_pairs.append(tag_pair)
+        summary_lines = {"C": "", "B": "", "F": "", "R": "", "N": ""}
         tag_out = open(outprefix + ".tagInfo", "w")
         if single_end:
             tag_out.write("Tag1\tTag2\tSeq\tCount\tType\n")
@@ -486,7 +494,6 @@ class sample_sorter():
             total_seqs = 0
             header = ftag + "\t" + rtag + "\t"
             footer = "\t" + tag_type + "\n"
-            summary_lines = {"C": "", "B": "", "F": "", "R": "", "N": ""}
             if single_end:
                 for amplicon, amplicon_count in current_haps.items():
                     tag_out.write(header + amplicon + "\t")
@@ -540,7 +547,7 @@ class sample_sorter():
         self.logger.debug("Finished writing summary file.")
 
 
-    def __process_single_end(self, read_filename, is_gzipped, tags_used):
+    def __process_single_end(self, read_filename, is_gzipped):
         """Process single end read files.
 
         Read and separate single end read file into sample read files.
