@@ -50,7 +50,11 @@ class sample_sorter():
     _samp_info = {}
     _pool_info = {}
     _merge = False
-    _primer_type_counts = [0, 0, 0, 0, 0, 0, 0, 0]
+    # Primer type counts details
+    # 0: no primer, 1: F-R good, 2: F-noR, 3:noF-R
+    # 4: R-F, 5: R-noF, 6: noR-F, 7: ampliconempty
+    # 8: F-R multi, 9: R-F multi
+    _primer_type_counts = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     _tag_type_counts = [0, 0, 0, 0, 0, 0, 0, 0]
     merge = False
     merge_overlap = 10
@@ -81,6 +85,7 @@ class sample_sorter():
         self.merge_overlap = sorter_args.merge_overlap
         self.merge_errors = sorter_args.merge_errors
         ###################################################
+        self. allowMultiPrims = sorter_args.allow_multiple_primers
         self.tag_errors = sorter_args.tag_mismatches
         self.primer_errors = sorter_args.primer_mismatches
         self.output_directory = sorter_args.output_directory
@@ -99,8 +104,8 @@ class sample_sorter():
             when input values are out of range.
 
         """
-        if self.tag_errors < 0.0 or self.tag_errors > 0.2:
-            raise ValueError("Tag mismatch rate should be in [0.0, 0.2].")
+        if self.tag_errors < 0:
+            raise ValueError("Tag mismatch rate should be > 0.")
         if self.primer_errors < 0:
             raise ValueError("Primer mismatches should be >= 0.")
         if self.merge_errors < 0.0 or self.merge_errors > 0.2:
@@ -174,14 +179,18 @@ class sample_sorter():
         Print all the details on the primer types founds and the tag type
         found in the pool.
         """
+        self._primer_type_counts[1] += self._primer_type_counts[8]
+        self._primer_type_counts[4] += self._primer_type_counts[9]
         ptc = [str(x) for x in self._primer_type_counts]
         self.logger.info("Primer match type details")
         self.logger.info("-------------------------")
         self.logger.info("  Neither primer       :" + ptc[0])
         self.logger.info("  Both F-R primer      :" + ptc[1])
+        self.logger.info("     with multi-primers:" + ptc[8])
         self.logger.info("  F primer, no R primer:" + ptc[2])
         self.logger.info("  no F primer, R primer:" + ptc[3])
         self.logger.info("  Both R-F primer      :" + ptc[4])
+        self.logger.info("     with multi-primers:" + ptc[9])
         self.logger.info("  R primer, no F primer:" + ptc[5])
         self.logger.info("  no R primer, F primer:" + ptc[6])
         self.logger.info("  No barcode (SE only) :" + ptc[7])
@@ -475,9 +484,9 @@ class sample_sorter():
         summary_lines = {"C": "", "B": "", "F": "", "R": "", "N": ""}
         tag_out = open(outprefix + ".tagInfo", "w")
         if single_end:
-            tag_out.write("Tag1\tTag2\tSeq\tCount\tType\n")
+            tag_out.write("FTag\tRTag\tSeq\tCount\tType\n")
         else:
-            tag_out.write("Tag1\tTag2\tFSeq\tRSeq\tCount\tType\n")
+            tag_out.write("FTag\tRTag\tFSeq\tRSeq\tCount\tType\n")
         for tag_pair, current_haps in haps.items():
             (ftag, rtag) = tag_pair
             ftag_in_pool = (ftag in pool_tags)
@@ -495,16 +504,16 @@ class sample_sorter():
             total_seqs = 0
             header = ftag + "\t" + rtag + "\t"
             footer = "\t" + tag_type + "\n"
-            if single_end:
-                for amplicon, amplicon_count in current_haps.items():
-                    tag_out.write(header + amplicon + "\t")
-                    tag_out.write(str(amplicon_count) + footer)
-                    total_seqs += amplicon_count
-            else:
-                for amplicon, amplicon_count in current_haps.items():
-                    tag_out.write(header + "\t".join(amplicon) + "\t")
-                    tag_out.write(str(amplicon_count) + footer)
-                    total_seqs += amplicon_count
+            # if single_end:
+            #     for amplicon, amplicon_count in current_haps.items():
+            #         tag_out.write(header + amplicon + "\t")
+            #         tag_out.write(str(amplicon_count) + footer)
+            #         total_seqs += amplicon_count
+            # else:
+            for amplicon, amplicon_count in current_haps.items():
+                tag_out.write(header + amplicon + "\t")
+                tag_out.write(str(amplicon_count) + footer)
+                total_seqs += amplicon_count
             summary_lines[tag_type] += (header + str(len(current_haps)) + "\t")
             summary_lines[tag_type] += (str(total_seqs) + footer)
         tag_out.close()
@@ -576,14 +585,20 @@ class sample_sorter():
             (fstart, fend, rstart, rend, match_type) = self.__find_primer_pos(
                 seq, seq_rc)
             self._primer_type_counts[match_type] += 1
-            if match_type == 1:
+            if (self.allowMultiPrims and match_type == 8) or match_type == 1:
                 ftag = str(seq)[0:fstart]
                 rtag = str(seq_rc)[0:rstart]
                 amplicon = str(seq)[fend:(len(seq)-rend)]
-            elif match_type == 4:
+                self.logger.debug("FT: " + str(fstart) + " " + ftag)
+                self.logger.debug("RT: " + str(rstart) + " " + rtag)
+                self.logger.debug("match: " + str(match_type))
+            elif (self.allowMultiPrims and match_type == 9) or match_type == 4:
                 ftag = str(seq_rc)[0:rstart]
                 rtag = str(seq)[0:fstart]
                 amplicon = str(seq_rc)[rend:(len(seq)-fend)]
+                self.logger.debug("FT: " + str(rstart) + " " + ftag)
+                self.logger.debug("RT: " + str(fstart) + " " + rtag)
+                self.logger.debug("match: " + str(match_type))
             else:
                 continue
             if len(amplicon) == 0:
@@ -644,11 +659,11 @@ class sample_sorter():
             if match_type == 1:
                 ftag = str(seq1)[0:fstart]
                 rtag = str(seq2)[0:rstart]
-                amplicon = (str(seq1)[fend:], str(seq2)[rend:])
+                amplicon = (str(seq1)[fend:] + "\t" + str(seq2)[rend:])
             elif match_type == 4:
                 ftag = str(seq2)[0:rstart]
                 rtag = str(seq1)[0:fstart]
-                amplicon = (str(seq2)[rend:], str(seq1)[fend:])
+                amplicon = (str(seq2)[rend:] + "\t" + str(seq1)[fend:])
             else:
                 continue
             best_ftag = self.__find_best_tag_match(ftag)
@@ -673,6 +688,14 @@ class sample_sorter():
     def __find_primer_pos(self, fq_read1, fq_read2):
         """Find primer positions for using the 5' and 3' sequences.
 
+        Find the primer positions, where both times the primers are found
+        starting at the 5' of the read. In case of single end reads, it is
+        such that both primers (F and R) are searched for from the 5' end of
+        read. For paired end, in read 1 we search for it from the 5' end and in
+        read2 from the 3' end (since it is already complemented). In our case,
+        since we give read1 and RC(read1) for single end, it works out that the
+        procedure is the same.
+
         Parameters
         ----------
         fq_read1 : :obj: Bio seq object
@@ -690,7 +713,7 @@ class sample_sorter():
         int
             Start of reverse primer match
         int
-            End of reverser primer match
+            End of reverse primer match
         int
             Type of match
 
@@ -700,10 +723,15 @@ class sample_sorter():
         match_type = 0  # no primers found
         # First find the forward primer in read 1, and reverse in read 2.
         # F in read 1 and R' in read2
-        (fstart, fend) = DU.find_first_match(self._primers_rgx[0], read1_seq)
-        (rstart, rend) = DU.find_first_match(self._primers_rgx[1], read2_seq)
+        (fstart, fend, num_fwd) = DU.find_first_match(self._primers_rgx[0],
+                                                      read1_seq)
+        (rstart, rend, num_rev) = DU.find_last_match(self._primers_rgx[1],
+                                                     read2_seq)
         if fstart != -1 and rstart != -1:
-            match_type = 1
+            if num_fwd > 1 or num_rev > 1:
+                match_type = 8
+            else:
+                match_type = 1
         elif fstart != -1 and rstart == -1:
             match_type = 2
         elif fstart == -1 and rstart != -1:
@@ -712,16 +740,19 @@ class sample_sorter():
             return((fstart, fend, rstart, rend, match_type))
 
         # R in read 1 and F' in read2
-        (rstart, rend) = DU.find_first_match(self._primers_rgx[1], read1_seq)
-        (fstart, fend) = DU.find_first_match(self._primers_rgx[0], read2_seq)
+        (rstart, rend, num_rev) = DU.find_first_match(self._primers_rgx[1],
+                                                      read1_seq)
+        (fstart, fend, num_fwd) = DU.find_last_match(self._primers_rgx[0],
+                                                     read2_seq)
         if fstart != -1 and rstart != -1:
-            match_type = 4
+            if num_fwd > 1 or num_rev > 1:
+                match_type = 9
+            else:
+                match_type = 4
         elif rstart != -1 and fstart == -1:
             match_type = 5
         elif rstart == -1 and fstart != -1:
             match_type = 6
-        if fstart != -1 or rstart != -1:
-            return((rstart, rend, fstart, fend, match_type))
         return((fstart, fend, rstart, rend, match_type))
 
     def __find_best_tag_match(self, tag):
@@ -743,18 +774,20 @@ class sample_sorter():
         # First figure out forward tag
         best_dist = len(tag) + 100
         best_tag = ""
+        num_matches = 0
         for tag_name in self._tag_dict:
             tag_seq = self._tag_dict[tag_name]
             cur_dist = DU.find_hamming_distance(tag_seq, tag)
             if cur_dist < best_dist:
+                num_matches = 1
                 best_tag = tag_name
                 best_dist = cur_dist
             elif cur_dist == best_dist:
                 if len(tag_seq) > len(self._tag_dict[best_tag]):
                     best_tag = tag_name
+                    num_matches = 1
                 elif len(tag_seq) == len(self._tag_dict[best_tag]):
-                    best_tag = ""
-                    break
-        if best_dist > self.tag_errors:
+                    num_matches += 1
+        if best_dist > self.tag_errors or num_matches > 1:
             best_tag = ""
         return(best_tag)

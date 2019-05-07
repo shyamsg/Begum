@@ -92,7 +92,7 @@ class dna_utility(object):
         return dna_regex
 
     @staticmethod
-    def find_first_match(matcher_regex, target_dna):
+    def __find_match(matcher_regex, target_dna):
         """Find first match of given sequence in an unambiguous sequence.
 
         Given a target sequence, find the first/best match of this target
@@ -102,13 +102,14 @@ class dna_utility(object):
         ----------
         matcher_regex : compiled regex pattern
             compiled regular expression object
-        target_dna : :obj: Bio.Seq.Seq object
-            dna sequence object
+        target_dna : string
+            dna sequence
 
         Returns
         -------
-        int
-            start position of best match (first if many), -1 if no matches
+        (int, int)
+            start and end positions of best match (first if many),
+            -1 if no matches.
 
         """
         firstmatch = matcher_regex.search(target_dna)
@@ -116,6 +117,79 @@ class dna_utility(object):
             return((-1, -1))
         else:
             return(firstmatch.span())
+
+    @staticmethod
+    def find_last_match(matcher_regex, target_dna):
+        """Find last match of given sequence in an unambiguous sequence.
+
+        Given a target sequence, find the last best match of this target
+        sequence in a given unambiguous dna sequence.
+
+        Parameters
+        ----------
+        matcher_regex : compiled regex pattern
+            compiled regular expression object
+        target_dna : string
+            dna sequence
+
+        Returns
+        -------
+        (int, int, int)
+            start and end positions of last match (first if many),
+            -1 if no matches. Also returns the number of matches found
+
+        """
+        cur_end = 0
+        last_start = 0
+        last_end = 0
+        number_found = 0
+        while True:
+            target_dna = target_dna[cur_end:]
+            cur_start, cur_end = dna_utility.__find_match(matcher_regex,
+                                                          target_dna)
+            if cur_start == -1:
+                break
+            number_found += 1
+            last_start = last_end + cur_start
+            last_end = last_end + cur_end
+        if last_start == 0 and last_end == 0:
+            last_start = -1
+            last_end = -1
+        return ((last_start, last_end, number_found))
+
+    @staticmethod
+    def find_first_match(matcher_regex, target_dna):
+        """Find first match of given sequence in an unambiguous sequence.
+
+        Given a target sequence, find the first best match of this target
+        sequence in a given unambiguous dna sequence.
+
+        Parameters
+        ----------
+        matcher_regex : compiled regex pattern
+            compiled regular expression object
+        target_dna : string
+            dna sequence
+
+        Returns
+        -------
+        (int, int, int)
+            start and end positions of last match (first if many),
+            -1 if no matches. Also returns the number of matches found
+
+        """
+        (first_start, first_end) = dna_utility.__find_match(matcher_regex,
+                                                            target_dna)
+        cur_end = 0
+        number_found = 0
+        while True:
+            target_dna = target_dna[cur_end:]
+            cur_start, cur_end = dna_utility.__find_match(matcher_regex,
+                                                          target_dna)
+            if cur_start == -1:
+                break
+            number_found += 1
+        return ((first_start, first_end, number_found))
 
     @staticmethod
     def find_hamming_distance(target_seq, source_seq, look_at_end=True):

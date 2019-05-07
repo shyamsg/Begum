@@ -31,11 +31,6 @@ def parse_cl_arguments():
 
     # Add parser for the sorting step
     sortParser = subparser.add_parser("sort")
-    # sortParser.add_argument("-1", "--fq1", help="Merged fastq file or \
-    #                         read 1 of paired end", metavar="Fastq1",
-    #                         required=True, dest="fastq1")
-    # sortParser.add_argument("-2", "--fq2", help="Read 2 of paired end",
-    #                         metavar="Fastq2", dest="fastq2", default="")
     sortParser.add_argument("-p", "--primers", help="File with forward and \
                             reverse primer sequence\n(Format: ForwardPrimer \
                             ReversePrimer)", required=False, default="",
@@ -54,6 +49,10 @@ def parse_cl_arguments():
     sortParser.add_argument("-l", "--pool", help="File with pool information \
                             \n(Format: Poolname Read1Fastq [Read2Fastq])",
                             required=True, metavar="PoolInformationFile")
+    sortParser.add_argument("-m", "--allowMultiplePrimers", help="Allow more \
+                            one occurrance of the primer sequence in read. \
+                            (Default False)", action="store_true",
+                            dest="allow_multiple_primers")
     sortParser.add_argument("-pm", "--primerMismatches", help="Number of \
                             mismatches in primer. (Default 0)", type=int,
                             default=0, metavar="PrimerMismatches",
