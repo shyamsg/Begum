@@ -127,7 +127,13 @@ def main():
         logger.info("Running the sorting module.")
         sorter = sort.sample_sorter(args, logger)
         sorter.read_tag_file(args.tags)
-        sorter.read_primer_file(args.primers)
+        if args.primers != "":
+            sorter.read_primer_file(args.primers)
+        elif args.fwdPrimer != "" and args.revPrimer != "":
+            sorter.set_primer_seqs(args.fwdPrimer, args.revPrimer)
+        else:
+            raise IOError("Need to specify either a primer file, \
+                           or primer sequences.")
         sorter.read_pool_file(args.pool)
         sorter.read_sample_information_file(args.sampleInfo)
         sorter.process_read_file()
