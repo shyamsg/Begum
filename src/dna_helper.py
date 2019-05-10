@@ -32,17 +32,18 @@ import regex
 
 from textdistance import hamming
 
-DNA_UNAMBIGUOUS_CHARS = "ACGTUNacgtun"
-DNA_UNAMBIGUOUS_REV = "TGCAANtgcaan"
-DNA_AMBIGUOUS_CHARS = "ACGTURYSWKMBDHVNacgturyswkmbdhvn"
-DNA_AMBIGUOUS_REV = "TGCAAYRWSMKVHDBNtgcaayrwsmkvhdbn"
+DNA_UNAMBIGUOUS_CHARS = "ACGTUNIacgtuni"
+DNA_UNAMBIGUOUS_REV = "TGCAANItgcaani"
+DNA_AMBIGUOUS_CHARS = "ACGTURYSWKMBDHVNIacgturyswkmbdhvni"
+DNA_AMBIGUOUS_REV = "TGCAAYRWSMKVHDBNItgcaayrwsmkvhdbni"
 # COMPLEMENT_UNAMBIGOUS_DNA = maketrans(DNA_UNAMBIGUOUS_CHARS,
 #                                       DNA_UNAMBIGUOUS_REV)
 # COMPLEMENT_AMBIGOUS_DNA = maketrans(DNA_AMBIGUOUS_CHARS, DNA_AMBIGUOUS_REV)
 
-SUBSET = {"A": "A", "C": "C", "G": "G", "T": "T", "U": "U", "R": "AG",
-          "Y": "CT", "S": "GC", "W": "AT", "K": "GT", "M": "AC", "B": "CGTYSK",
-          "D": "AGTRWK", "V": "ACTYWM", "H": "ACGRSM", "N": "ACGTURYSWKMBDHVN"}
+# SUBSET = {"A": "A", "C": "C", "G": "G", "T": "T", "U": "U", "R": "AG",
+#         "Y": "CT", "S": "GC", "W": "AT", "K": "GT", "M": "AC", "B": "CGTYSK",
+#         "D": "AGTRWK", "V": "ACTYWM", "H": "ACGRSM",
+#         "N": "ACGTURYSWKMBDHVNI", "I": "ACGTURYSWKMBDHVNI"}
 AMB_REGEX_DICT = {"A": r"A", "a": r"a", "C": r"C", "c": r"c", "G": r"G",
                   "g": r"g", "T": r"T", "t": r"t", "U": r"U", "u": r"u",
                   "R": r"[AG]", "r": r"[ag]", "Y": r"[CT]", "y": r"[ct]",
@@ -50,7 +51,8 @@ AMB_REGEX_DICT = {"A": r"A", "a": r"a", "C": r"C", "c": r"c", "G": r"G",
                   "K": r"[GT]", "k": r"[gt]", "M": r"[AC]", "m": r"[AC]",
                   "B": r"[CGT]", "b": r"[cgt]", "D": r"[AGT]", "d": r"[agt]",
                   "V": r"[ACT]", "v": r"[act]", "H": r"[ACG]", "h": r"[acg]",
-                  "N": r"[ACGT]", "n": r"[acgt]"}
+                  "N": r"[ACGT]", "n": r"[acgt]", "I": r"[ACGT]",
+                  "i": r"[acgt]"}
 
 
 class dna_utility(object):
@@ -81,12 +83,20 @@ class dna_utility(object):
             compiled dna regex with modified ambiguity bases, ready for use in
             string matching.
 
+        Raises
+        ------
+        KeyError
+            when character is not in dna dictionary.
+
         """
         if not preserve_case:   # convert to upper case if not preserve case
             sequence = sequence.upper()
         dna_regex = r"(?b)("  # best match set
         for c in sequence:
-            dna_regex += AMB_REGEX_DICT[c]
+            if c in AMB_REGEX_DICT:
+                dna_regex += AMB_REGEX_DICT[c]
+            else:
+                raise KeyError(c + "is not an allowed DNA character.")
         dna_regex = dna_regex + r"){s<="+str(mismatches)+r"}"
         dna_regex = regex.compile(dna_regex)
         return dna_regex
