@@ -105,8 +105,8 @@ def parse_cl_arguments():
     filterParser.add_argument("-d", "--output_directory", help="Output \
                               directory", default=".", metavar="OutDirectory")
     filterParser.add_argument("-o", "--output_prefix", help="Prefix for \
-                              output files", default="", metavar="OutPrefix",
-                              dest="output_prefix")
+                              output files", default="Filtered",
+                              metavar="OutPrefix", dest="output_prefix")
     args = parser.parse_args()
     return(args)
 

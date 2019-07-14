@@ -49,10 +49,10 @@ class filter_sorted():
 
         """
         self.logger = logger
-        self.prop_pcr = filter_args.proportion_pcr
-        self.min_count = filter_args.min_count
-        self.min_length = filter_args.min_length
-        self.input_prefix = filter_args.input_prefix
+        self.prop_pcr = filter_args.propPCRs
+        self.min_count = filter_args.minOccurence
+        self.min_length = filter_args.minLength
+        self.input_prefix = filter_args.inputPrefix
         self.output_directory = filter_args.output_directory
         self.output_prefix = filter_args.output_prefix
         self.input_values_check()
@@ -200,18 +200,13 @@ class filter_sorted():
                 temp = tag_pair[0] + "." + tag_pair[1]
                 self._rep_info[sample][replicate] = temp
 
-    def process_sort_output_files(self, sort_filename_prefix):
+    def process_sort_output_files(self):
         """Process the sort output file to create sample files.
 
         Read the output file from the sorter class and process it for quality,
         including minimum length, proportion of PCRs and number of pools. Then
         output the reads in a file for each sample, with the tag written on the
         fasta header line.
-
-        Parameters
-        ----------
-        sort_filename_prefix : string
-            output filename prefix from the sorting function
 
         Raises
         ------
@@ -225,7 +220,7 @@ class filter_sorted():
         pool_names = self._samp_info.keys()
         self._paired_end = None
         for pool in pool_names:
-            sort_file = open(sort_filename_prefix + "_" + pool + ".tagInfo")
+            sort_file = open(self.input_prefix + "_" + pool + ".tagInfo")
             current_pool = self._samp_info[pool]
             headerline = sort_file.readline()
             headerline = headerline.strip().split()
