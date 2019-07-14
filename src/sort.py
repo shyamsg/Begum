@@ -33,8 +33,6 @@ class sample_sorter():
         rate of mismatches allowed in overlap region of the paired end reads.
     tag_errors : float
         rate or number of mismatches tolerated in tags.
-    complexity_bases : bool
-        are complexity bases allowed in the tags?
     primer_errors : float
         rate or number of mismatches tolerated in primers.
     output_prefix : string
@@ -80,7 +78,8 @@ class sample_sorter():
         self.logger = logger
         ###################################################
         # The next 2 options are not user since           #
-        # they are not implemented                        #
+        # they are not implemented yet, but will they     #
+        # ever be.                                        #
         ###################################################
         self.merge_overlap = sorter_args.merge_overlap
         self.merge_errors = sorter_args.merge_errors
@@ -481,6 +480,12 @@ class sample_sorter():
         for tag_pair in self._samp_info[pool_name]:
             pool_tags.update(tag_pair)
             pool_tag_pairs.append(tag_pair)
+        # Decode key :)
+        # C => correct pair
+        # B => Both used, but not the correct pair
+        # F => Forward used, not reverse
+        # R => Reverse used, not forward
+        # N => Neither used
         summary_lines = {"C": "", "B": "", "F": "", "R": "", "N": ""}
         tag_out = open(outprefix + ".tagInfo", "w")
         if single_end:

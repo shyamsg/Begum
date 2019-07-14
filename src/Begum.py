@@ -9,6 +9,7 @@ the command line.
 import argparse
 import logging
 
+import filter
 import sort
 
 
@@ -78,13 +79,13 @@ def parse_cl_arguments():
 
     # Add parser for the filter step
     filterParser = subparser.add_parser("filter")
-    filterParser.add_argument("-i", "--infofile", help="Information file with\
-                              fastq information for each sample.",
-                              metavar="Infofile", required=True)
-    filterParser.add_argument("-n", "--minNumPCRs", help="Minimum number of \
-                              PCR replicates a sequence should be present in.",
-                              metavar="minPCRNums", type=int, default=1,
-                              required=False)
+    filterParser.add_argument("-i", "--inputPrefix", help="Information file \
+                              with prefix information for the sort tagInfo \
+                              files.", metavar="InputPrefix", required=True)
+    filterParser.add_argument("-s", "--sampleInfo", help="File with tag combo \
+                              and pool for each sample\n(Format: Sample \
+                              FwdTagName RevTagName PoolName)", required=True,
+                              metavar="SampleInformationFile")
     filterParser.add_argument("-p", "--propPCRs", help="Minimum proportion of \
                               PCR replicates a sequence should be present in.",
                               metavar="propPCRs", type=float, default=1.0,
@@ -137,8 +138,14 @@ def main():
         sorter.read_pool_file(args.pool)
         sorter.read_sample_information_file(args.sampleInfo)
         sorter.process_read_file()
+        logger.info("Finished sorting.")
     elif args.command == "filter":
         logger.info("Running the filter module.")
+        filt = filter.filter_sorted(args, logger)
+        filt.read_sample_information_file(args.sampleInfo)
+        filt.process_sort_output_files(args.inputPrefix)
+        filt.process_haps_info()
+        logger.info("Finished filtering.")
 
 
 main()
