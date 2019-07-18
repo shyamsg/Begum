@@ -143,7 +143,7 @@ def main():
         logger.info("Running the filter module.")
         filt = filter.filter_sorted(args, logger)
         filt.read_sample_information_file(args.sampleInfo)
-        filt.process_sort_output_files(args.inputPrefix)
+        filt.process_sort_output_files()
         filt.process_haps_info()
         logger.info("Finished filtering.")
 
