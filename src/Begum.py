@@ -24,10 +24,10 @@ def parse_cl_arguments():
         namespace with parsed arguments key-value pairs.
 
     """
-    parser = argparse.ArgumentParser(prog="Damian", description="Damian \
-                                     metabarcoding preprocessing tool",
+    parser = argparse.ArgumentParser(prog="Begum", description="Metabarcoding \
+                                     and eDNA sequence preprocessing tool",
                                      version="0.1", )
-    subparser = parser.add_subparsers(help="Damian command to run",
+    subparser = parser.add_subparsers(help="Begum command to run",
                                       dest="command")
 
     # Add parser for the sorting step
