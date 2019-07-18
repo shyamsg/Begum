@@ -69,7 +69,7 @@ class filter_sorted():
             when input values are out of range.
 
         """
-        if self.prob_pcr < 0 or self.prob_pcr > 1:
+        if self.prop_pcr < 0 or self.prop_pcr > 1:
             raise ValueError("PCR proportion should be between 0 and 1.")
         if self.min_count < 1:
             raise ValueError("Minimum read count per PCR should be >= 1.")
