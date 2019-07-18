@@ -260,7 +260,7 @@ class filter_sorted():
                     self._haps_info[sample][seq] = {}
                     for rep in self._rep_info[sample]:
                         temp_tp = self._rep_info[sample][rep]
-                        self._haps_info[sample][seq][rep] = (temp_tp, 0)
+                        self._haps_info[sample][seq][rep] = [temp_tp, 0]
                 self._haps_info[sample][seq][replicate][1] = count
             sort_file.close()
 
