@@ -249,7 +249,7 @@ class filter_sorted():
                 (sample, replicate) = current_pool[tag_pair]
                 # process it, one way for single end and another for paired end
                 if self._paired_end:
-                    seq = toks[2:4]
+                    seq = "_".join(toks[2:4])
                     count = int(toks[4])
                 else:
                     seq = toks[2]
@@ -296,11 +296,12 @@ class filter_sorted():
                 fasta_header += "_".join(tag_pairs) + "\t"
                 fasta_header += "_".join([str(x) for x in counts])
                 if self._paired_end:
-                    if (len(seq[0]) + len(seq[1])) >= self.min_length:
+                    if (len(seq)-1) >= self.min_length:
+                        oseq = seq.split("_")
                         out_file.write(fasta_header + "\tread1\n")
-                        out_file.write(seq[0] + "\n")
+                        out_file.write(oseq[0] + "\n")
                         out_file.write(fasta_header + "\tread2\n")
-                        out_file.write(seq[1] + "\n")
+                        out_file.write(oseq[1] + "\n")
                 else:
                     if len(seq) >= self.min_length:
                         out_file.write(fasta_header + "\n")
