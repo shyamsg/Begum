@@ -10,7 +10,7 @@ DADA2 downstream - maybe.
 import gzip
 
 from Bio import SeqIO
-from Bio.Alphabet import IUPAC
+#from Bio.Alphabet import IUPAC
 from Bio.Seq import Seq
 
 from dna_helper import dna_utility as DU
@@ -127,8 +127,8 @@ class sample_sorter():
             reverse primer sequence - ambiguities allowed.
 
         """
-        fwd_primer = Seq(fwd_sequence, IUPAC.IUPACAmbiguousDNA())
-        rev_primer = Seq(rev_sequence, IUPAC.IUPACAmbiguousDNA())
+        fwd_primer = Seq(fwd_sequence)#, IUPAC.IUPACAmbiguousDNA())
+        rev_primer = Seq(rev_sequence)#, IUPAC.IUPACAmbiguousDNA())
         self.logger.info("Setting foward primer to " + fwd_sequence)
         self.logger.info("Setting reverse primer to " + rev_sequence)
         self._primer_pair = (fwd_primer, rev_primer)
@@ -282,7 +282,7 @@ class sample_sorter():
             if tokens[0] in self._tag_dict:
                 self.logger.error("Repeat tag name: " + tokens[0])
                 raise IOError(tokens[0] + " already present in file.")
-            forwardTag = Seq(tokens[1], IUPAC.IUPACUnambiguousDNA())
+            forwardTag = Seq(tokens[1])#, IUPAC.IUPACUnambiguousDNA())
             self._tag_dict[tokens[0]] = forwardTag
         self.logger.info("Read " + str(len(self._tag_dict)) + " valid tag \
                          combinations.")
