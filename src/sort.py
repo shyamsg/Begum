@@ -148,29 +148,29 @@ class sample_sorter():
         Print detailed information on the dictionaries in this class.
 
         """
-        self.logger.debug("Sorter details")
-        self.logger.debug("--------------")
-        self.logger.debug("Primers:")
-        self.logger.debug("  Fwd: " + self._primer_pair[0])
-        self.logger.debug("  Rev: " + self._primer_pair[1])
-        self.logger.debug("  # mismatches allowed: " + str(self.primer_errors))
-        self.logger.debug("Tags:")
+        self.logger.info("Sorter details")
+        self.logger.info("--------------")
+        self.logger.info("Primers:")
+        self.logger.info("  Fwd: " + self._primer_pair[0])
+        self.logger.info("  Rev: " + self._primer_pair[1])
+        self.logger.info("  # mismatches allowed: " + str(self.primer_errors))
+        self.logger.info("Tags:")
         for tag_name, tag_seq in self._tag_dict.items():
-            self.logger.debug("  " + tag_name + ": " + tag_seq)
-        self.logger.debug("  # of mismatches allowed: " + str(self.tag_errors))
-        self.logger.debug("Pools and samples:")
+            self.logger.info("  " + tag_name + ": " + tag_seq)
+        self.logger.info("  # of mismatches allowed: " + str(self.tag_errors))
+        self.logger.info("Pools and samples:")
         for pool_name, fastqs in self._pool_info.items():
             log = "  " + pool_name + ": "
             log += " ".join([(x + ":" + str(y)) for x, y in fastqs.items()])
-            self.logger.debug(log)
+            self.logger.info(log)
             cur_samples = self._samp_info[pool_name]
             for tag_pair, samp in cur_samples.items():
                 log = ("    " + "\t".join(tag_pair) + "\t")
                 log += ("\t".join([str(x) for x in samp]))
-                self.logger.debug(log)
-        self.logger.debug("Output details:")
-        self.logger.debug("  Directory: " + self.output_directory)
-        self.logger.debug("  Prefix: " + self.output_prefix)
+                self.logger.info(log)
+        self.logger.info("Output details:")
+        self.logger.info("  Directory: " + self.output_directory)
+        self.logger.info("  Prefix: " + self.output_prefix)
 
     def __log_out_details(self):
         """Print primer and tag type count details.
@@ -433,23 +433,23 @@ class sample_sorter():
         self.__log_in_details()
         # figure out for each pool, what is going on.
         for pool_name in self._pool_info:
-            self.logger.debug("Processing reads for pool " + pool_name)
+            self.logger.info("Processing reads for pool " + pool_name)
             read1_filename = self._pool_info[pool_name]["read1"]
             read2_filename = self._pool_info[pool_name]["read2"]
             is_gzipped = self._pool_info[pool_name]["zipped"]
             outname = self.output_directory + "/" + self.output_prefix
             outname += "_" + pool_name
-            self.logger.debug("Read1 file:" + read1_filename)
-            self.logger.debug("Read2 file:" + read2_filename)
-            self.logger.debug("Zip status:" + str(is_gzipped))
+            self.logger.info("Read1 file:" + read1_filename)
+            self.logger.info("Read2 file:" + read2_filename)
+            self.logger.info("Zip status:" + str(is_gzipped))
             if read2_filename == "":
-                self.logger.debug("Processing single end files.")
+                self.logger.info("Processing single end files.")
                 haps = self.__process_single_end(read1_filename, is_gzipped)
                 self.__write_out_files(haps, outname, pool_name,
                                        single_end=True)
                 self.__log_out_details()
             else:
-                self.logger.debug("Processing paired end files.")
+                self.logger.info("Processing paired end files.")
                 haps = self.__process_paired_end(read1_filename,
                                                  read2_filename, is_gzipped)
                 self.__write_out_files(haps, outname, pool_name,
@@ -474,7 +474,7 @@ class sample_sorter():
 
         """
         # Make a set of tags used in this pool.
-        self.logger.debug("Writing output files.")
+        self.logger.info("Writing output files.")
         pool_tags = set()
         pool_tag_pairs = []
         for tag_pair in self._samp_info[pool_name]:
@@ -522,7 +522,7 @@ class sample_sorter():
             summary_lines[tag_type] += (header + str(len(current_haps)) + "\t")
             summary_lines[tag_type] += (str(total_seqs) + footer)
         tag_out.close()
-        self.logger.debug("Finished writing output files.")
+        self.logger.info("Finished writing output files.")
         # Write the summary file.
         self.__write_summary_file(outprefix, summary_lines)
 
@@ -540,7 +540,7 @@ class sample_sorter():
             Info on different types of output tag combinations
 
         """
-        self.logger.debug("Writing summary file.")
+        self.logger.info("Writing summary file.")
         tag_summary = open(outprefix + ".summaryCounts", "w")
         tag_summary.write("Tag1\tTag2\tUniqSeqs\tTotalSeqs\tType\n")
         tag_summary.write("Correct combination of tags used in pool\n")
